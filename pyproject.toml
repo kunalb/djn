@@ -1,0 +1,27 @@
+[project]
+name = "djnai"
+version = "0.1.0"
+description = "Utilities to work with LLM agents from the terminal."
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.uv]
+managed = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.isort]
+profile = "black"
+known_first_party = ["djn"]
+line_length = 100

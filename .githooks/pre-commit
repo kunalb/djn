@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is required to run formatting hooks" >&2
+  exit 1
+fi
+
+if [ ! -d ".venv" ]; then
+  uv venv .venv
+fi
+
+RUFF=.venv/bin/ruff
+ISORT=.venv/bin/isort
+if [ ! -x "$RUFF" ] || [ ! -x "$ISORT" ]; then
+  uv pip install --python .venv/bin/python ruff isort >/dev/null
+fi
+
+PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\.py$" || true)
+if [ -z "$PYTHON_FILES" ]; then
+  exit 0
+fi
+
+$RUFF format $PYTHON_FILES
+$ISORT --profile black $PYTHON_FILES
+
+git add $PYTHON_FILES

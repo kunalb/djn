@@ -31,12 +31,19 @@ def _ensure_tmux_binary():
 
 
 def _start_tmux_session(columns: int):
-    orientation = "-h" if columns > 160 else "-v"
     session_name = f"djnai-{os.getpid()}-{uuid.uuid4().hex[:6]}"
-    target = f"{session_name}:0"
     try:
         subprocess.run(["tmux", "new-session", "-d", "-s", session_name], check=True)
-        subprocess.run(["tmux", "split-window", "-t", target, orientation], check=True)
+        subprocess.run(
+            [
+                "tmux",
+                "split-window",
+                "-t",
+                f"{session_name}:0",
+                "-h" if columns > 160 else "-v",
+            ],
+            check=True,
+        )
         subprocess.run(["tmux", "attach-session", "-t", session_name], check=True)
     except subprocess.CalledProcessError as error:
         _error("Error: failed to start tmux session.", error.returncode)
@@ -47,19 +54,16 @@ def split_pane():
         width, _ = _window_size()
     except subprocess.CalledProcessError as error:
         _error("Error: tmux pane required. Attach to tmux before running.", error.returncode)
-    orientation = "-h" if width > 160 else "-v"
     try:
-        subprocess.run(["tmux", "split-window", orientation], check=True)
+        subprocess.run(["tmux", "split-window", "-h" if width > 160 else "-v"], check=True)
     except subprocess.CalledProcessError as error:
         _error("Error: tmux pane required. Attach to tmux before running.", error.returncode)
 
 
-def pane_contents():
-    ...
+def pane_contents(): ...
 
 
-def record_transcript():
-    ...
+def record_transcript(): ...
 
 
 def main():
