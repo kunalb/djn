@@ -9,6 +9,8 @@ Wisp 3 mirrors the Wisp MVP flow, but calls the LAMP JSON-RPC server via
 - Ensure `acp.el` is installed (MELPA) and `nc` is available.
 - Load `wisp.el` in Emacs and run `M-x wisp3-apply-comment`.
 
+
+
 ## Smoke test
 Run a batch smoke test for the Emacs side:
 
