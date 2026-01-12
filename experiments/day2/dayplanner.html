@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day Planner + Pomodoro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+    }
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .date-nav button {
+      background: #0f3460;
+      border: none;
+      color: #eee;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .date-nav button:hover { background: #1a4a7a; }
+    .current-date {
+      font-size: 18px;
+      font-weight: 600;
+      min-width: 140px;
+      text-align: center;
+    }
+    .pomodoro-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pomodoro-btn {
+      background: #e94560;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .pomodoro-btn:hover { background: #ff6b6b; }
+    .pomodoro-btn.cancel { background: #666; }
+    .pomodoro-btn.cancel:hover { background: #888; }
+    .pomodoro-timer {
+      font-size: 20px;
+      font-weight: bold;
+      color: #e94560;
+      min-width: 60px;
+    }
+
+    /* Main layout */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr 300px;
+      height: calc(100vh - 110px);
+    }
+
+    /* Timeline columns */
+    .timeline-column {
+      border-right: 1px solid #0f3460;
+      overflow-y: auto;
+    }
+    .column-header {
+      position: sticky;
+      top: 0;
+      background: #16213e;
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      border-bottom: 1px solid #0f3460;
+      z-index: 10;
+    }
+    .timeline {
+      position: relative;
+      height: calc(24 * 60px);
+    }
+    .hour-row {
+      height: 60px;
+      border-bottom: 1px solid #0f3460;
+      position: relative;
+    }
+    .hour-label {
+      position: absolute;
+      left: 4px;
+      top: 2px;
+      font-size: 11px;
+      color: #666;
+    }
+    .hour-row:hover { background: rgba(15, 52, 96, 0.3); }
+
+    /* Entries */
+    .entry {
+      position: absolute;
+      left: 40px;
+      right: 8px;
+      background: #0f3460;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      overflow: hidden;
+      cursor: grab;
+      border-left: 3px solid #4a9eff;
+      min-height: 20px;
+      user-select: none;
+    }
+    .entry.dragging {
+      cursor: grabbing;
+      opacity: 0.8;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .entry.pomodoro {
+      background: #3d1a1a;
+      border-left-color: #e94560;
+    }
+    .entry.pomodoro.completed {
+      background: #1a3d1a;
+      border-left-color: #4ade80;
+    }
+    .entry-text {
+      outline: none;
+      min-height: 16px;
+      word-break: break-word;
+      cursor: text;
+    }
+    .entry-text:empty:before {
+      content: 'Click to add text...';
+      color: #666;
+    }
+    .entry-delete {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .entry:hover .entry-delete { opacity: 1; }
+    .entry-delete:hover { color: #e94560; background: rgba(233, 69, 96, 0.2); }
+    .entry-resize {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      cursor: ns-resize;
+    }
+    .entry-time {
+      font-size: 10px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+
+    /* Notes sidebar */
+    .notes-panel {
+      background: #16213e;
+      display: flex;
+      flex-direction: column;
+    }
+    .notes-header {
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      border-bottom: 1px solid #0f3460;
+    }
+    .notes-content {
+      flex: 1;
+      padding: 12px;
+      outline: none;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .notes-content:empty:before {
+      content: 'Write your notes here...';
+      color: #666;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px;
+      background: #16213e;
+      border-top: 1px solid #0f3460;
+    }
+    .footer button {
+      background: #0f3460;
+      border: none;
+      color: #eee;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .footer button:hover { background: #1a4a7a; }
+
+    /* Current time indicator */
+    .current-time-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #e94560;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .current-time-line::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: -4px;
+      width: 10px;
+      height: 10px;
+      background: #e94560;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="date-nav">
+      <button onclick="changeDay(-1)">&larr; Prev</button>
+      <span class="current-date" id="currentDate"></span>
+      <button onclick="changeDay(1)">Next &rarr;</button>
+    </div>
+    <div class="pomodoro-controls">
+      <span class="pomodoro-timer" id="pomodoroTimer"></span>
+      <button class="pomodoro-btn" id="pomodoroBtn" onclick="togglePomodoro()">Start Pomodoro</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="timeline-column" id="plansColumn">
+      <div class="column-header">PLANS</div>
+      <div class="timeline" id="plansTimeline"></div>
+    </div>
+    <div class="timeline-column" id="actualsColumn">
+      <div class="column-header">ACTUAL</div>
+      <div class="timeline" id="actualsTimeline"></div>
+    </div>
+    <div class="notes-panel">
+      <div class="notes-header">NOTES</div>
+      <div class="notes-content" id="notesContent" contenteditable="true"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button onclick="exportAsText()">Export as Text</button>
+    <button onclick="exportAllDays()">Export All Days</button>
+  </div>
+
+  <script>
+    // ============ STATE ============
+    const STORAGE_KEY = 'dayplanner_data';
+    let state = {
+      currentDate: getTodayStr(),
+      data: loadAllData(),
+      activePomodoro: null,
+      pomodoroInterval: null
+    };
+
+    // ============ DATE UTILS ============
+    function getTodayStr() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatTime(hour, minutes) {
+      return `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    // ============ DATA PERSISTENCE ============
+    function loadAllData() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveAllData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+    }
+
+    function getDayData() {
+      if (!state.data[state.currentDate]) {
+        state.data[state.currentDate] = {
+          plans: [],
+          actuals: [],
+          pomodoros: [],
+          notes: ''
+        };
+      }
+      return state.data[state.currentDate];
+    }
+
+    // ============ RENDERING ============
+    function render() {
+      document.getElementById('currentDate').textContent = formatDate(state.currentDate);
+      renderTimeline('plans', 'plansTimeline');
+      renderTimeline('actuals', 'actualsTimeline');
+      renderNotes();
+      renderCurrentTimeLine();
+    }
+
+    function renderTimeline(type, containerId) {
+      const container = document.getElementById(containerId);
+      const dayData = getDayData();
+      const entries = dayData[type];
+      const pomodoros = dayData.pomodoros;
+
+      // Build hour rows
+      let html = '';
+      for (let h = 0; h < 24; h++) {
+        html += `<div class="hour-row" data-hour="${h}" onclick="handleHourClick(event, '${type}', ${h})">
+          <span class="hour-label">${formatTime(h, 0)}</span>
+        </div>`;
+      }
+      container.innerHTML = html;
+
+      // Render entries
+      entries.forEach(entry => {
+        renderEntry(container, entry, type, false);
+      });
+
+      // Render pomodoros
+      pomodoros.forEach(pom => {
+        // Show in plans if not completed, show in actuals if completed (or both during active)
+        if (type === 'plans' && !pom.completed) {
+          renderEntry(container, pom, type, true);
+        } else if (type === 'actuals' && pom.completed) {
+          renderEntry(container, pom, type, true);
+        } else if (pom.active) {
+          // Active pomodoro shows in both
+          renderEntry(container, pom, type, true);
+        }
+      });
+    }
+
+    function renderEntry(container, entry, type, isPomodoro) {
+      const el = document.createElement('div');
+      el.className = 'entry' + (isPomodoro ? ' pomodoro' : '') + (entry.completed ? ' completed' : '');
+
+      const topPx = (entry.hour * 60 + entry.minutes);
+      const heightPx = Math.max(entry.durationMins, 15);
+      el.style.top = topPx + 'px';
+      el.style.height = heightPx + 'px';
+      el.dataset.id = entry.id;
+      el.dataset.type = type;
+      el.dataset.isPomodoro = isPomodoro;
+
+      const timeStr = formatTime(entry.hour, entry.minutes);
+      const endMin = entry.hour * 60 + entry.minutes + entry.durationMins;
+      const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
+
+      el.innerHTML = `
+        <div class="entry-time">${timeStr} - ${endTimeStr}${isPomodoro ? ' [POMODORO]' : ''}</div>
+        <div class="entry-text" contenteditable="true">${entry.text || ''}</div>
+        <button class="entry-delete" onclick="deleteEntry(event, '${type}', '${entry.id}', ${isPomodoro})">&times;</button>
+        ${!isPomodoro ? '<div class="entry-resize"></div>' : ''}
+      `;
+
+      // Double-click to duplicate plan to actual
+      if (type === 'plans' && !isPomodoro) {
+        el.addEventListener('dblclick', (e) => {
+          if (e.target.classList.contains('entry-delete')) return;
+          duplicateToActual(entry);
+        });
+      }
+
+      // Text editing
+      const textEl = el.querySelector('.entry-text');
+      textEl.addEventListener('blur', () => {
+        updateEntryText(type, entry.id, textEl.textContent, isPomodoro);
+      });
+
+      // Resize functionality
+      if (!isPomodoro) {
+        const resizeEl = el.querySelector('.entry-resize');
+        resizeEl.addEventListener('mousedown', (e) => startResize(e, entry, type));
+      }
+
+      // Drag functionality
+      el.addEventListener('mousedown', (e) => {
+        // Don't drag if clicking on resize handle, delete button, or editing text
+        if (e.target.classList.contains('entry-resize') ||
+            e.target.classList.contains('entry-delete') ||
+            e.target.classList.contains('entry-text')) return;
+        startDrag(e, entry, type, isPomodoro, el, container);
+      });
+
+      container.appendChild(el);
+    }
+
+    function renderNotes() {
+      const dayData = getDayData();
+      document.getElementById('notesContent').textContent = dayData.notes || '';
+    }
+
+    function renderCurrentTimeLine() {
+      // Remove existing lines
+      document.querySelectorAll('.current-time-line').forEach(el => el.remove());
+
+      // Only show on today
+      if (state.currentDate !== getTodayStr()) return;
+
+      const now = new Date();
+      const topPx = now.getHours() * 60 + now.getMinutes();
+
+      ['plansTimeline', 'actualsTimeline'].forEach(id => {
+        const line = document.createElement('div');
+        line.className = 'current-time-line';
+        line.style.top = topPx + 'px';
+        document.getElementById(id).appendChild(line);
+      });
+    }
+
+    // ============ ENTRY MANAGEMENT ============
+    function handleHourClick(event, type, hour) {
+      // Don't create if clicking on an entry
+      if (event.target.closest('.entry')) return;
+
+      // Calculate minutes from click position
+      const rect = event.currentTarget.getBoundingClientRect();
+      const relativeY = event.clientY - rect.top;
+      const minutes = Math.floor(relativeY / 15) * 15; // Snap to 15-min
+
+      addEntry(type, hour, minutes);
+    }
+
+    function addEntry(type, hour, minutes) {
+      const dayData = getDayData();
+      const entry = {
+        id: type.charAt(0) + '_' + Date.now(),
+        hour,
+        minutes,
+        durationMins: 30,
+        text: ''
+      };
+      dayData[type].push(entry);
+      saveAllData();
+      render();
+
+      // Focus the new entry's text
+      setTimeout(() => {
+        const el = document.querySelector(`[data-id="${entry.id}"] .entry-text`);
+        if (el) el.focus();
+      }, 10);
+    }
+
+    function deleteEntry(event, type, id, isPomodoro) {
+      event.stopPropagation();
+      const dayData = getDayData();
+
+      if (isPomodoro === 'true' || isPomodoro === true) {
+        dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== id);
+        // If deleting active pomodoro, clear it
+        if (state.activePomodoro?.id === id) {
+          clearPomodoro();
+        }
+      } else {
+        dayData[type] = dayData[type].filter(e => e.id !== id);
+      }
+
+      saveAllData();
+      render();
+    }
+
+    function updateEntryText(type, id, text, isPomodoro) {
+      const dayData = getDayData();
+      const arr = isPomodoro ? dayData.pomodoros : dayData[type];
+      const entry = arr.find(e => e.id === id);
+      if (entry) {
+        entry.text = text;
+        saveAllData();
+      }
+    }
+
+    function duplicateToActual(planEntry) {
+      const dayData = getDayData();
+      const newEntry = {
+        id: 'a_' + Date.now(),
+        hour: planEntry.hour,
+        minutes: planEntry.minutes,
+        durationMins: planEntry.durationMins,
+        text: planEntry.text
+      };
+      dayData.actuals.push(newEntry);
+      saveAllData();
+      render();
+    }
+
+    // ============ RESIZE ============
+    let resizeState = null;
+
+    function startResize(e, entry, type) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      resizeState = {
+        entry,
+        type,
+        startY: e.clientY,
+        startHeight: entry.durationMins
+      };
+
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', endResize);
+    }
+
+    function doResize(e) {
+      if (!resizeState) return;
+
+      const deltaY = e.clientY - resizeState.startY;
+      const newDuration = Math.max(15, Math.round((resizeState.startHeight + deltaY) / 15) * 15);
+
+      const dayData = getDayData();
+      const entry = dayData[resizeState.type].find(en => en.id === resizeState.entry.id);
+      if (entry) {
+        entry.durationMins = newDuration;
+        render();
+      }
+    }
+
+    function endResize() {
+      if (resizeState) {
+        saveAllData();
+        resizeState = null;
+      }
+      document.removeEventListener('mousemove', doResize);
+      document.removeEventListener('mouseup', endResize);
+    }
+
+    // ============ DRAG ============
+    let dragState = null;
+
+    function startDrag(e, entry, type, isPomodoro, element, container) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = container.getBoundingClientRect();
+      const entryTop = entry.hour * 60 + entry.minutes;
+
+      dragState = {
+        entry,
+        type,
+        isPomodoro,
+        element,
+        container,
+        containerRect: rect,
+        startY: e.clientY,
+        startTop: entryTop,
+        scrollTop: container.parentElement.scrollTop
+      };
+
+      element.classList.add('dragging');
+      document.addEventListener('mousemove', doDrag);
+      document.addEventListener('mouseup', endDrag);
+    }
+
+    function doDrag(e) {
+      if (!dragState) return;
+
+      const { element, containerRect, startY, startTop, container } = dragState;
+      const scrollDelta = container.parentElement.scrollTop - dragState.scrollTop;
+      const deltaY = e.clientY - startY + scrollDelta;
+      const newTop = Math.max(0, Math.min(24 * 60 - 15, startTop + deltaY));
+      const snappedTop = Math.round(newTop / 15) * 15;
+
+      element.style.top = snappedTop + 'px';
+
+      // Update time display
+      const newHour = Math.floor(snappedTop / 60);
+      const newMinutes = snappedTop % 60;
+      const endMin = snappedTop + dragState.entry.durationMins;
+      const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
+      const timeEl = element.querySelector('.entry-time');
+      const isPomodoro = dragState.isPomodoro;
+      timeEl.textContent = `${formatTime(newHour, newMinutes)} - ${endTimeStr}${isPomodoro ? ' [POMODORO]' : ''}`;
+    }
+
+    function endDrag() {
+      if (dragState) {
+        const { entry, type, isPomodoro, element } = dragState;
+        const newTop = parseInt(element.style.top);
+        const newHour = Math.floor(newTop / 60);
+        const newMinutes = newTop % 60;
+
+        // Update the entry in data
+        const dayData = getDayData();
+        const arr = isPomodoro ? dayData.pomodoros : dayData[type];
+        const dataEntry = arr.find(e => e.id === entry.id);
+        if (dataEntry) {
+          dataEntry.hour = newHour;
+          dataEntry.minutes = newMinutes;
+          saveAllData();
+        }
+
+        element.classList.remove('dragging');
+        dragState = null;
+        render();
+      }
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', endDrag);
+    }
+
+    // ============ POMODORO ============
+    function togglePomodoro() {
+      if (state.activePomodoro) {
+        cancelPomodoro();
+      } else {
+        startPomodoro();
+      }
+    }
+
+    function startPomodoro() {
+      const now = new Date();
+      const pom = {
+        id: 'pom_' + Date.now(),
+        hour: now.getHours(),
+        minutes: now.getMinutes(),
+        durationMins: 25,
+        text: '',
+        completed: false,
+        active: true,
+        startTime: Date.now()
+      };
+
+      getDayData().pomodoros.push(pom);
+      state.activePomodoro = pom;
+      saveAllData();
+      render();
+
+      updatePomodoroBtn();
+      state.pomodoroInterval = setInterval(updatePomodoroTimer, 1000);
+    }
+
+    function updatePomodoroTimer() {
+      if (!state.activePomodoro) return;
+
+      const elapsed = Date.now() - state.activePomodoro.startTime;
+      const remaining = (state.activePomodoro.durationMins * 60 * 1000) - elapsed;
+
+      if (remaining <= 0) {
+        completePomodoro();
+        return;
+      }
+
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      document.getElementById('pomodoroTimer').textContent =
+        `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function completePomodoro() {
+      if (!state.activePomodoro) return;
+
+      // Find and update the pomodoro
+      const dayData = getDayData();
+      const pom = dayData.pomodoros.find(p => p.id === state.activePomodoro.id);
+      if (pom) {
+        pom.completed = true;
+        pom.active = false;
+      }
+
+      clearPomodoro();
+      saveAllData();
+      render();
+
+      // Notify
+      if (Notification.permission === 'granted') {
+        new Notification('Pomodoro Complete!', { body: 'Time for a break.' });
+      }
+    }
+
+    function cancelPomodoro() {
+      if (!state.activePomodoro) return;
+
+      // Remove the pomodoro entirely
+      const dayData = getDayData();
+      dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== state.activePomodoro.id);
+
+      clearPomodoro();
+      saveAllData();
+      render();
+    }
+
+    function clearPomodoro() {
+      state.activePomodoro = null;
+      if (state.pomodoroInterval) {
+        clearInterval(state.pomodoroInterval);
+        state.pomodoroInterval = null;
+      }
+      updatePomodoroBtn();
+      document.getElementById('pomodoroTimer').textContent = '';
+    }
+
+    function updatePomodoroBtn() {
+      const btn = document.getElementById('pomodoroBtn');
+      if (state.activePomodoro) {
+        btn.textContent = 'Cancel';
+        btn.classList.add('cancel');
+      } else {
+        btn.textContent = 'Start Pomodoro';
+        btn.classList.remove('cancel');
+      }
+    }
+
+    // ============ NAVIGATION ============
+    function changeDay(delta) {
+      const d = new Date(state.currentDate + 'T00:00:00');
+      d.setDate(d.getDate() + delta);
+      state.currentDate = d.toISOString().split('T')[0];
+      render();
+    }
+
+    // ============ NOTES ============
+    document.getElementById('notesContent').addEventListener('blur', function() {
+      getDayData().notes = this.textContent;
+      saveAllData();
+    });
+
+    // ============ EXPORT ============
+    function exportDayAsText(dateStr) {
+      const dayData = state.data[dateStr];
+      if (!dayData) return '';
+
+      let text = `=== ${dateStr} ===\n\n`;
+
+      // Plans
+      text += 'PLANS:\n';
+      dayData.plans.forEach(e => {
+        text += `${formatTime(e.hour, e.minutes)} (${e.durationMins}min) ${e.text}\n`;
+      });
+      dayData.pomodoros.filter(p => !p.completed).forEach(p => {
+        text += `${formatTime(p.hour, p.minutes)} (${p.durationMins}min) [POMODORO] ${p.text}\n`;
+      });
+
+      text += '\nACTUAL:\n';
+      dayData.actuals.forEach(e => {
+        text += `${formatTime(e.hour, e.minutes)} (${e.durationMins}min) ${e.text}\n`;
+      });
+      dayData.pomodoros.filter(p => p.completed).forEach(p => {
+        text += `${formatTime(p.hour, p.minutes)} (${p.durationMins}min) [POMODORO] ${p.text} [COMPLETED]\n`;
+      });
+
+      text += '\nNOTES:\n';
+      text += dayData.notes || '(none)';
+      text += '\n';
+
+      return text;
+    }
+
+    function exportAsText() {
+      const text = exportDayAsText(state.currentDate);
+      downloadText(`dayplanner-${state.currentDate}.txt`, text);
+    }
+
+    function exportAllDays() {
+      const dates = Object.keys(state.data).sort();
+      let text = '';
+      dates.forEach(date => {
+        text += exportDayAsText(date) + '\n\n';
+      });
+      downloadText('dayplanner-all.txt', text);
+    }
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // ============ INIT ============
+    function init() {
+      render();
+
+      // Update time line every minute
+      setInterval(renderCurrentTimeLine, 60000);
+
+      // Request notification permission
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
