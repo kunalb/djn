@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Day Planner + Pomodoro</title>
+  <meta name="theme-color" content="#f5f0e1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Day Planner">
+  <link rel="manifest" href="data:application/json,{%22name%22:%22Day%20Planner%22,%22short_name%22:%22Planner%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23FFF8E7%22,%22theme_color%22:%22%23f5f0e1%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f5f0e1' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' font-size='50'>📅</text></svg>%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
+  <title>Day Planner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -1103,6 +1108,7 @@
       render();
       setupScrollSync();
       scrollToCurrentTime();
+      registerServiceWorker();
 
       // Update time line every minute
       setInterval(renderCurrentTimeLine, 60000);
@@ -1110,6 +1116,27 @@
       // Request notification permission
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
+      }
+    }
+
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          const CACHE_NAME = 'dayplanner-v1';
+          self.addEventListener('install', e => {
+            e.waitUntil(
+              caches.open(CACHE_NAME).then(cache => cache.addAll(['./', self.location.href]))
+            );
+            self.skipWaiting();
+          });
+          self.addEventListener('fetch', e => {
+            e.respondWith(
+              caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./')))
+            );
+          });
+        `;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
       }
     }
 
