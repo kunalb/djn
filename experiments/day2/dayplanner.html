@@ -75,8 +75,78 @@
     /* Main layout */
     .main {
       display: grid;
-      grid-template-columns: 1fr 1fr 260px;
+      grid-template-columns: 28px 1fr 1fr 260px;
       height: calc(100vh - 76px);
+    }
+
+    /* Pomodoro gutter */
+    .pomodoro-gutter {
+      background: #f5f0e1;
+      border-right: 1px solid #e0d9c8;
+      overflow-y: auto;
+      position: relative;
+    }
+    .pomodoro-gutter-header {
+      position: sticky;
+      top: 0;
+      background: #f5f0e1;
+      padding: 6px 2px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 1px solid #e0d9c8;
+      z-index: 10;
+    }
+    .pomodoro-gutter-timeline {
+      position: relative;
+      height: calc(24 * 48px);
+    }
+    .pom-marker {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      background: #c9462c;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 16px;
+      transition: opacity 0.1s;
+    }
+    .pom-marker:hover { opacity: 0.8; }
+    .pom-marker.active {
+      background: #c9462c;
+      animation: pulse 2s infinite;
+    }
+    .pom-marker.completed {
+      background: #5a9a5a;
+    }
+    .pom-marker-delete {
+      position: absolute;
+      top: -6px;
+      right: -4px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      font-size: 10px;
+      line-height: 12px;
+      text-align: center;
+      color: #999;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+    .pom-marker:hover .pom-marker-delete { opacity: 1; }
+    .pom-marker-delete:hover { color: #c9462c; border-color: #c9462c; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     /* Timeline columns */
@@ -138,14 +208,6 @@
       opacity: 0.85;
       z-index: 100;
       box-shadow: 0 3px 8px rgba(0,0,0,0.12);
-    }
-    .entry.pomodoro {
-      background: #fff5f3;
-      border-left-color: #c9462c;
-    }
-    .entry.pomodoro.completed {
-      background: #f3f9f3;
-      border-left-color: #5a9a5a;
     }
     .entry-text {
       outline: none;
@@ -277,6 +339,10 @@
   </div>
 
   <div class="main">
+    <div class="pomodoro-gutter" id="pomodoroGutter">
+      <div class="pomodoro-gutter-header">POM</div>
+      <div class="pomodoro-gutter-timeline" id="pomodoroGutterTimeline"></div>
+    </div>
     <div class="timeline-column" id="plansColumn">
       <div class="column-header">PLANS</div>
       <div class="timeline" id="plansTimeline"></div>
@@ -350,6 +416,7 @@
       document.getElementById('currentDate').textContent = formatDate(state.currentDate);
       renderTimeline('plans', 'plansTimeline');
       renderTimeline('actuals', 'actualsTimeline');
+      renderPomodoroGutter();
       renderNotes();
       renderCurrentTimeLine();
     }
@@ -358,7 +425,6 @@
       const container = document.getElementById(containerId);
       const dayData = getDayData();
       const entries = dayData[type];
-      const pomodoros = dayData.pomodoros;
 
       // Build hour rows
       let html = '';
@@ -371,28 +437,38 @@
 
       // Render entries
       entries.forEach(entry => {
-        renderEntry(container, entry, type, false);
+        renderEntry(container, entry, type);
       });
+    }
 
-      // Render pomodoros
+    function renderPomodoroGutter() {
+      const container = document.getElementById('pomodoroGutterTimeline');
+      const dayData = getDayData();
+      const pomodoros = dayData.pomodoros;
+
+      container.innerHTML = '';
+
       pomodoros.forEach(pom => {
-        // Show in plans if not completed, show in actuals if completed (or both during active)
-        if (type === 'plans' && !pom.completed) {
-          renderEntry(container, pom, type, true);
-        } else if (type === 'actuals' && pom.completed) {
-          renderEntry(container, pom, type, true);
-        } else if (pom.active) {
-          // Active pomodoro shows in both
-          renderEntry(container, pom, type, true);
-        }
+        const el = document.createElement('div');
+        el.className = 'pom-marker' + (pom.active ? ' active' : '') + (pom.completed ? ' completed' : '');
+
+        const topPx = (pom.hour * 60 + pom.minutes) * PX_PER_MIN;
+        const heightPx = Math.max(pom.durationMins * PX_PER_MIN, 16);
+        el.style.top = topPx + 'px';
+        el.style.height = heightPx + 'px';
+        el.title = `${formatTime(pom.hour, pom.minutes)} (${pom.durationMins}min)${pom.completed ? ' - completed' : pom.active ? ' - active' : ''}`;
+
+        el.innerHTML = `<span class="pom-marker-delete" onclick="deletePomodoro(event, '${pom.id}')">&times;</span>`;
+
+        container.appendChild(el);
       });
     }
 
     const PX_PER_MIN = 48 / 60; // 48px per hour
 
-    function renderEntry(container, entry, type, isPomodoro) {
+    function renderEntry(container, entry, type) {
       const el = document.createElement('div');
-      el.className = 'entry' + (isPomodoro ? ' pomodoro' : '') + (entry.completed ? ' completed' : '');
+      el.className = 'entry';
 
       const topPx = (entry.hour * 60 + entry.minutes) * PX_PER_MIN;
       const heightPx = Math.max(entry.durationMins * PX_PER_MIN, 12);
@@ -400,21 +476,20 @@
       el.style.height = heightPx + 'px';
       el.dataset.id = entry.id;
       el.dataset.type = type;
-      el.dataset.isPomodoro = isPomodoro;
 
       const timeStr = formatTime(entry.hour, entry.minutes);
       const endMin = entry.hour * 60 + entry.minutes + entry.durationMins;
       const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
 
       el.innerHTML = `
-        <div class="entry-time">${timeStr} - ${endTimeStr}${isPomodoro ? ' [POMODORO]' : ''}</div>
+        <div class="entry-time">${timeStr} - ${endTimeStr}</div>
         <div class="entry-text" contenteditable="true">${entry.text || ''}</div>
-        <button class="entry-delete" onclick="deleteEntry(event, '${type}', '${entry.id}', ${isPomodoro})">&times;</button>
-        ${!isPomodoro ? '<div class="entry-resize"></div>' : ''}
+        <button class="entry-delete" onclick="deleteEntry(event, '${type}', '${entry.id}')">&times;</button>
+        <div class="entry-resize"></div>
       `;
 
       // Double-click to duplicate plan to actual
-      if (type === 'plans' && !isPomodoro) {
+      if (type === 'plans') {
         el.addEventListener('dblclick', (e) => {
           if (e.target.classList.contains('entry-delete')) return;
           duplicateToActual(entry);
@@ -424,14 +499,12 @@
       // Text editing
       const textEl = el.querySelector('.entry-text');
       textEl.addEventListener('blur', () => {
-        updateEntryText(type, entry.id, textEl.textContent, isPomodoro);
+        updateEntryText(type, entry.id, textEl.textContent);
       });
 
       // Resize functionality
-      if (!isPomodoro) {
-        const resizeEl = el.querySelector('.entry-resize');
-        resizeEl.addEventListener('mousedown', (e) => startResize(e, entry, type));
-      }
+      const resizeEl = el.querySelector('.entry-resize');
+      resizeEl.addEventListener('mousedown', (e) => startResize(e, entry, type));
 
       // Drag functionality
       el.addEventListener('mousedown', (e) => {
@@ -439,7 +512,7 @@
         if (e.target.classList.contains('entry-resize') ||
             e.target.classList.contains('entry-delete') ||
             e.target.classList.contains('entry-text')) return;
-        startDrag(e, entry, type, isPomodoro, el, container);
+        startDrag(e, entry, type, el, container);
       });
 
       container.appendChild(el);
@@ -502,28 +575,29 @@
       }, 10);
     }
 
-    function deleteEntry(event, type, id, isPomodoro) {
+    function deleteEntry(event, type, id) {
       event.stopPropagation();
       const dayData = getDayData();
-
-      if (isPomodoro === 'true' || isPomodoro === true) {
-        dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== id);
-        // If deleting active pomodoro, clear it
-        if (state.activePomodoro?.id === id) {
-          clearPomodoro();
-        }
-      } else {
-        dayData[type] = dayData[type].filter(e => e.id !== id);
-      }
-
+      dayData[type] = dayData[type].filter(e => e.id !== id);
       saveAllData();
       render();
     }
 
-    function updateEntryText(type, id, text, isPomodoro) {
+    function deletePomodoro(event, id) {
+      event.stopPropagation();
       const dayData = getDayData();
-      const arr = isPomodoro ? dayData.pomodoros : dayData[type];
-      const entry = arr.find(e => e.id === id);
+      dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== id);
+      // If deleting active pomodoro, clear it
+      if (state.activePomodoro?.id === id) {
+        clearPomodoro();
+      }
+      saveAllData();
+      render();
+    }
+
+    function updateEntryText(type, id, text) {
+      const dayData = getDayData();
+      const entry = dayData[type].find(e => e.id === id);
       if (entry) {
         entry.text = text;
         saveAllData();
@@ -589,7 +663,7 @@
     // ============ DRAG ============
     let dragState = null;
 
-    function startDrag(e, entry, type, isPomodoro, element, container) {
+    function startDrag(e, entry, type, element, container) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -599,7 +673,6 @@
       dragState = {
         entry,
         type,
-        isPomodoro,
         element,
         container,
         containerRect: rect,
@@ -631,13 +704,12 @@
       const endMin = snappedMins + dragState.entry.durationMins;
       const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
       const timeEl = element.querySelector('.entry-time');
-      const isPomodoro = dragState.isPomodoro;
-      timeEl.textContent = `${formatTime(newHour, newMinutes)} - ${endTimeStr}${isPomodoro ? ' [POMODORO]' : ''}`;
+      timeEl.textContent = `${formatTime(newHour, newMinutes)} - ${endTimeStr}`;
     }
 
     function endDrag() {
       if (dragState) {
-        const { entry, type, isPomodoro, element } = dragState;
+        const { entry, type, element } = dragState;
         const newTopPx = parseFloat(element.style.top);
         const newTopMins = Math.round(newTopPx / PX_PER_MIN);
         const newHour = Math.floor(newTopMins / 60);
@@ -645,8 +717,7 @@
 
         // Update the entry in data
         const dayData = getDayData();
-        const arr = isPomodoro ? dayData.pomodoros : dayData[type];
-        const dataEntry = arr.find(e => e.id === entry.id);
+        const dataEntry = dayData[type].find(e => e.id === entry.id);
         if (dataEntry) {
           dataEntry.hour = newHour;
           dataEntry.minutes = newMinutes;
@@ -831,9 +902,64 @@
       URL.revokeObjectURL(a.href);
     }
 
+    // ============ SCROLL SYNC ============
+    function setupScrollSync() {
+      const plans = document.getElementById('plansColumn');
+      const actuals = document.getElementById('actualsColumn');
+      const gutter = document.getElementById('pomodoroGutter');
+
+      let isSyncing = false;
+
+      function syncScroll(source) {
+        if (isSyncing) return;
+        isSyncing = true;
+        const scrollTop = source.scrollTop;
+        [plans, actuals, gutter].forEach(el => {
+          if (el !== source) el.scrollTop = scrollTop;
+        });
+        isSyncing = false;
+      }
+
+      plans.addEventListener('scroll', () => syncScroll(plans));
+      actuals.addEventListener('scroll', () => syncScroll(actuals));
+      gutter.addEventListener('scroll', () => syncScroll(gutter));
+    }
+
     // ============ INIT ============
+    function restoreActivePomodoro() {
+      // Check all days for an active pomodoro
+      for (const dateStr of Object.keys(state.data)) {
+        const dayData = state.data[dateStr];
+        if (!dayData.pomodoros) continue;
+
+        const activePom = dayData.pomodoros.find(p => p.active && !p.completed);
+        if (activePom) {
+          // Check if it should have completed by now
+          const elapsed = Date.now() - activePom.startTime;
+          const duration = activePom.durationMins * 60 * 1000;
+
+          if (elapsed >= duration) {
+            // Should have completed - mark it complete
+            activePom.completed = true;
+            activePom.active = false;
+            saveAllData();
+          } else {
+            // Still running - restore it
+            state.activePomodoro = activePom;
+            state.currentDate = dateStr; // Switch to that day
+            updatePomodoroBtn();
+            state.pomodoroInterval = setInterval(updatePomodoroTimer, 1000);
+            updatePomodoroTimer(); // Update immediately
+          }
+          return;
+        }
+      }
+    }
+
     function init() {
+      restoreActivePomodoro();
       render();
+      setupScrollSync();
 
       // Update time line every minute
       setInterval(renderCurrentTimeLine, 60000);
