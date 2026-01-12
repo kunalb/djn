@@ -6,12 +6,17 @@
   <title>Day Planner + Pomodoro</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
     body {
       font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
       font-size: 12px;
       background: #FFF8E7;
       color: #3a3a3a;
-      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Header */
@@ -76,7 +81,8 @@
     .main {
       display: grid;
       grid-template-columns: 28px 1fr 1fr 260px;
-      height: calc(100vh - 76px);
+      flex: 1;
+      min-height: 0;
     }
 
     /* Pomodoro gutter */
@@ -85,6 +91,11 @@
       border-right: 1px solid #e0d9c8;
       overflow-y: auto;
       position: relative;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .pomodoro-gutter::-webkit-scrollbar {
+      display: none;
     }
     .pomodoro-gutter-header {
       position: sticky;
@@ -154,6 +165,14 @@
       border-right: 1px solid #e0d9c8;
       overflow-y: auto;
       background: #fffcf5;
+    }
+    /* Hide scrollbar on plans column */
+    #plansColumn {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #plansColumn::-webkit-scrollbar {
+      display: none;
     }
     .column-header {
       position: sticky;
@@ -358,8 +377,10 @@
   </div>
 
   <div class="footer">
-    <button onclick="exportAsText()">Export as Text</button>
-    <button onclick="exportAllDays()">Export All Days</button>
+    <button onclick="exportAsText()">Export Day</button>
+    <button onclick="exportAllDays()">Export All</button>
+    <button onclick="document.getElementById('importFile').click()">Import</button>
+    <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importFromFile(event)">
   </div>
 
   <script>
@@ -900,6 +921,126 @@
       a.download = filename;
       a.click();
       URL.revokeObjectURL(a.href);
+    }
+
+    function importFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        const imported = parseImportText(text);
+        if (imported && Object.keys(imported).length > 0) {
+          // Merge with existing data
+          for (const [dateStr, dayData] of Object.entries(imported)) {
+            state.data[dateStr] = dayData;
+          }
+          saveAllData();
+          render();
+          alert(`Imported ${Object.keys(imported).length} day(s)`);
+        } else {
+          alert('Could not parse import file');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset for re-import
+    }
+
+    function parseImportText(text) {
+      const result = {};
+      const dayBlocks = text.split(/(?=^=== \d{4}-\d{2}-\d{2} ===)/m).filter(b => b.trim());
+
+      for (const block of dayBlocks) {
+        const dateMatch = block.match(/^=== (\d{4}-\d{2}-\d{2}) ===/);
+        if (!dateMatch) continue;
+
+        const dateStr = dateMatch[1];
+        const dayData = {
+          plans: [],
+          actuals: [],
+          pomodoros: [],
+          notes: ''
+        };
+
+        // Split into sections
+        const sections = block.split(/^(PLANS:|ACTUAL:|NOTES:)/m);
+
+        let currentSection = null;
+        for (let i = 0; i < sections.length; i++) {
+          const part = sections[i].trim();
+          if (part === 'PLANS:') {
+            currentSection = 'plans';
+          } else if (part === 'ACTUAL:') {
+            currentSection = 'actuals';
+          } else if (part === 'NOTES:') {
+            currentSection = 'notes';
+          } else if (currentSection === 'notes') {
+            dayData.notes = part === '(none)' ? '' : part;
+          } else if (currentSection === 'plans' || currentSection === 'actuals') {
+            const lines = part.split('\n').filter(l => l.trim());
+            for (const line of lines) {
+              const entry = parseEntryLine(line, currentSection);
+              if (entry) {
+                if (entry.isPomodoro) {
+                  // Only add pomodoro once (from actuals if completed, else from plans)
+                  const exists = dayData.pomodoros.some(p =>
+                    p.hour === entry.hour && p.minutes === entry.minutes
+                  );
+                  if (!exists) {
+                    dayData.pomodoros.push({
+                      id: 'pom_' + Date.now() + Math.random(),
+                      hour: entry.hour,
+                      minutes: entry.minutes,
+                      durationMins: entry.durationMins,
+                      text: entry.text,
+                      completed: entry.completed || false,
+                      active: false
+                    });
+                  } else if (entry.completed) {
+                    // Update existing to completed
+                    const pom = dayData.pomodoros.find(p =>
+                      p.hour === entry.hour && p.minutes === entry.minutes
+                    );
+                    if (pom) pom.completed = true;
+                  }
+                } else {
+                  dayData[currentSection].push({
+                    id: currentSection.charAt(0) + '_' + Date.now() + Math.random(),
+                    hour: entry.hour,
+                    minutes: entry.minutes,
+                    durationMins: entry.durationMins,
+                    text: entry.text
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        result[dateStr] = dayData;
+      }
+
+      return result;
+    }
+
+    function parseEntryLine(line, section) {
+      // Format: HH:MM (XXmin) [POMODORO] text [COMPLETED]
+      const match = line.match(/^(\d{2}):(\d{2})\s+\((\d+)min\)\s*(.*)$/);
+      if (!match) return null;
+
+      const hour = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      const durationMins = parseInt(match[3]);
+      let text = match[4];
+
+      const isPomodoro = text.includes('[POMODORO]');
+      const completed = text.includes('[COMPLETED]');
+
+      // Clean up text
+      text = text.replace('[POMODORO]', '').replace('[COMPLETED]', '').trim();
+
+      return { hour, minutes, durationMins, text, isPomodoro, completed };
     }
 
     // ============ SCROLL SYNC ============
