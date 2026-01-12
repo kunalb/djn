@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Architect v2</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --line-color: #eee;
+            --hour-line-color: #ddd;
+            --text-color: #444;
+            --accent-color: #333;
+            --plan-bg: #d1e7dd;
+            --plan-border: #0f5132;
+            --actual-bg: #cfe2ff;
+            --actual-border: #084298;
+            --slot-height: 20px; /* 15 minutes */
+            --hour-height: 80px; /* 4 * 20px */
+            --time-col-width: 60px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Header --- */
+        header {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        h1 { font-size: 1.2rem; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+
+        .controls { display: flex; gap: 10px; align-items: center; }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        button:hover { background: #333; color: white; border-color: #333; }
+
+        .timer-display { font-family: monospace; font-size: 1.1rem; font-weight: bold; width: 60px; text-align: center;}
+
+        /* --- Calendar Container --- */
+        .calendar-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+            user-select: none; /* Prevent text selection while dragging */
+        }
+
+        .header-row {
+            display: grid;
+            grid-template-columns: var(--time-col-width) 1fr 1fr;
+            border-bottom: 2px solid #ddd;
+            background: #fcfcfc;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .header-col {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border-right: 1px solid #eee;
+        }
+        .header-col:last-child { border-right: none; }
+
+        /* Scrollable Area */
+        .scroller {
+            height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            /* Grid background logic */
+            background-image: linear-gradient(to bottom, var(--line-color) 1px, transparent 1px);
+            background-size: 100% var(--slot-height);
+        }
+
+        .grid-body {
+            display: grid;
+            grid-template-columns: var(--time-col-width) 1fr 1fr;
+            position: relative;
+            /* Height set by JS based on 24h * slot height */
+        }
+
+        /* Vertical Dividers */
+        .col-divider {
+            border-right: 1px solid #eee;
+            height: 100%;
+        }
+
+        /* Time Labels */
+        .time-marker {
+            position: absolute;
+            left: 0;
+            width: var(--time-col-width);
+            text-align: right;
+            padding-right: 10px;
+            box-sizing: border-box;
+            font-size: 0.75rem;
+            color: #999;
+            transform: translateY(-50%); /* Center on line */
+        }
+        .time-marker.hour { font-weight: bold; color: #333; }
+
+        /* Hour Lines (Thicker) */
+        .hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px solid var(--hour-line-color);
+            pointer-events: none;
+        }
+
+        /* --- Events --- */
+        .event {
+            position: absolute;
+            left: 5px;
+            right: 5px; /* inset */
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+            overflow: hidden;
+            cursor: grab;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .event:active { cursor: grabbing; z-index: 15; opacity: 0.9; }
+
+        .event.plan { background-color: var(--plan-bg); border-left: 3px solid var(--plan-border); }
+        .event.actual { background-color: var(--actual-bg); border-left: 3px solid var(--actual-border); }
+
+        .event-time { font-size: 0.65rem; opacity: 0.7; margin-bottom: 2px; }
+        .event-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Dragging Ghost */
+        .ghost-event {
+            position: absolute;
+            background: rgba(0,0,0,0.05);
+            border: 1px dashed #666;
+            left: 5px; right: 5px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Current Time Line */
+        .now-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 2px solid red;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .now-line::after {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: -5px;
+            width: 8px;
+            height: 8px;
+            background: red;
+            border-radius: 50%;
+        }
+
+        /* --- Print --- */
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background: white; }
+            .calendar-wrapper { border: none; box-shadow: none; }
+            .scroller { height: auto; overflow: visible; }
+            /* Force background colors */
+            .event { -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="no-print">
+    <h1>Day Architect</h1>
+    <div class="controls">
+        <span id="pomoTimer" class="timer-display">25:00</span>
+        <button id="btnPomo">Start Focus</button>
+        <button onclick="window.print()">Print</button>
+        <button onclick="app.clearAll()">Clear</button>
+    </div>
+</header>
+
+<div class="calendar-wrapper">
+    <div class="header-row">
+        <div class="header-col">Time</div>
+        <div class="header-col">Plan</div>
+        <div class="header-col">Actual</div>
+    </div>
+
+    <div class="scroller" id="scroller">
+        <div class="grid-body" id="gridBody">
+            <!-- Columns for structure -->
+            <div class="col-divider"></div>
+            <div class="col-divider" id="col-plan"></div>
+            <div class="col-divider" id="col-actual"></div>
+
+            <!-- Overlays -->
+            <div id="timeLabels"></div>
+            <div id="gridOverlay"></div> <!-- Events go here -->
+            <div id="nowMarker" class="now-line"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+class DayPlanner {
+    constructor() {
+        // Config
+        this.SLOT_MINS = 15;
+        this.SLOT_HEIGHT = 20; // px
+        this.START_HOUR = 0;
+        this.END_HOUR = 24;
+
+        // State
+        this.events = JSON.parse(localStorage.getItem('dayPlannerEvents_v2') || '[]');
+        this.dragState = {
+            active: false,
+            mode: null, // 'draw' or 'move'
+            startY: 0,
+            currentY: 0,
+            column: null, // 'plan' or 'actual'
+            startSlot: 0,
+            eventRef: null // For moving existing event
+        };
+
+        // DOM
+        this.gridBody = document.getElementById('gridBody');
+        this.overlay = document.getElementById('gridOverlay');
+        this.colPlan = document.getElementById('col-plan');
+        this.colActual = document.getElementById('col-actual');
+        this.scroller = document.getElementById('scroller');
+
+        this.init();
+    }
+
+    init() {
+        this.renderGridBackground();
+        this.renderEvents();
+        this.startClock();
+        this.setupInteractions();
+        this.setupPomodoro();
+
+        // Scroll to 6 AM by default
+        this.scroller.scrollTop = (6 * 4) * this.SLOT_HEIGHT;
+    }
+
+    // --- Rendering ---
+
+    renderGridBackground() {
+        const totalSlots = (this.END_HOUR - this.START_HOUR) * (60 / this.SLOT_MINS);
+        const totalHeight = totalSlots * this.SLOT_HEIGHT;
+        this.gridBody.style.height = `${totalHeight}px`;
+
+        const labelsContainer = document.getElementById('timeLabels');
+
+        // Draw Hour Markers
+        for (let h = this.START_HOUR; h <= this.END_HOUR; h++) {
+            const top = (h - this.START_HOUR) * 4 * this.SLOT_HEIGHT;
+
+            // Text Label
+            if (h < this.END_HOUR) {
+                const label = document.createElement('div');
+                label.className = `time-marker ${h % 1 === 0 ? 'hour' : ''}`;
+                label.style.top = `${top}px`;
+                label.innerText = `${String(h).padStart(2,'0')}:00`;
+                labelsContainer.appendChild(label);
+            }
+
+            // Hour Line
+            const line = document.createElement('div');
+            line.className = 'hour-line';
+            line.style.top = `${top}px`;
+            labelsContainer.appendChild(line);
+        }
+    }
+
+    renderEvents() {
+        this.overlay.innerHTML = ''; // Clear
+        this.events.forEach(ev => {
+            const el = this.createEventElement(ev);
+            this.overlay.appendChild(el);
+        });
+    }
+
+    createEventElement(ev) {
+        const div = document.createElement('div');
+        div.className = `event ${ev.type}`;
+        div.id = `evt-${ev.id}`;
+
+        // Position
+        const top = ev.startSlot * this.SLOT_HEIGHT;
+        const height = ev.duration * this.SLOT_HEIGHT;
+        const colIndex = ev.type === 'plan' ? 2 : 3; // Grid column index
+
+        div.style.top = `${top}px`;
+        div.style.height = `${Math.max(height, this.SLOT_HEIGHT)}px`; // Min height 1 slot
+        div.style.gridColumn = colIndex;
+
+        // Content
+        const timeStr = this.getRangeString(ev.startSlot, ev.duration);
+        div.innerHTML = `
+            <div class="event-time">${timeStr}</div>
+            <div class="event-title">${ev.title}</div>
+        `;
+
+        // Event Listeners for Move
+        div.addEventListener('mousedown', (e) => this.handleEventMouseDown(e, ev));
+
+        return div;
+    }
+
+    // --- Helpers ---
+
+    getSlotFromY(y) {
+        return Math.floor(y / this.SLOT_HEIGHT);
+    }
+
+    getTimeString(slotIndex) {
+        const totalMins = (this.START_HOUR * 60) + (slotIndex * this.SLOT_MINS);
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    getRangeString(startSlot, duration) {
+        return `${this.getTimeString(startSlot)} - ${this.getTimeString(startSlot + duration)}`;
+    }
+
+    // --- Interaction (Drag/Draw/Move) ---
+
+    setupInteractions() {
+        // We bind events to the container, using delegation/coordinates
+        this.gridBody.addEventListener('mousedown', (e) => this.handleGridMouseDown(e));
+        document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+
+        // Delete on double click
+        this.gridBody.addEventListener('dblclick', (e) => {
+            const evtEl = e.target.closest('.event');
+            if (evtEl) {
+                const id = parseInt(evtEl.id.replace('evt-', ''));
+                if(confirm("Delete this block?")) {
+                    this.events = this.events.filter(x => x.id !== id);
+                    this.save();
+                    this.renderEvents();
+                }
+            }
+        });
+    }
+
+    getRelativeY(e) {
+        const rect = this.gridBody.getBoundingClientRect();
+        return e.clientY - rect.top + this.scroller.scrollTop; // Account for scroll
+    }
+
+    getColumnFromX(x) {
+        const rect = this.gridBody.getBoundingClientRect();
+        const relX = x - rect.left;
+        const oneThird = rect.width / 3; // Roughly (Time | Plan | Actual)
+        // Simple hit testing based on fixed width assumption or percentages
+        // Time col is fixed ~60px.
+        if (relX < 60) return null;
+        const remaining = rect.width - 60;
+        return (relX - 60) < (remaining / 2) ? 'plan' : 'actual';
+    }
+
+    handleGridMouseDown(e) {
+        if (e.target.closest('.event')) return; // Handled by EventMouseDown
+
+        const col = this.getColumnFromX(e.clientX);
+        if (!col) return;
+
+        this.dragState = {
+            active: true,
+            mode: 'draw',
+            column: col,
+            startSlot: this.getSlotFromY(this.getRelativeY(e)),
+            currentSlot: this.getSlotFromY(this.getRelativeY(e)),
+            ghost: document.createElement('div')
+        };
+
+        // Setup Ghost
+        this.dragState.ghost.className = 'ghost-event';
+        this.dragState.ghost.style.top = `${this.dragState.startSlot * this.SLOT_HEIGHT}px`;
+        this.dragState.ghost.style.height = `${this.SLOT_HEIGHT}px`;
+        this.dragState.ghost.style.gridColumn = col === 'plan' ? 2 : 3;
+        this.overlay.appendChild(this.dragState.ghost);
+    }
+
+    handleEventMouseDown(e, ev) {
+        e.stopPropagation(); // Don't trigger grid draw
+        e.preventDefault(); // Stop text selection
+
+        this.dragState = {
+            active: true,
+            mode: 'move',
+            eventRef: ev,
+            offsetY: this.getRelativeY(e) - (ev.startSlot * this.SLOT_HEIGHT),
+            originalEl: document.getElementById(`evt-${ev.id}`)
+        };
+
+        this.dragState.originalEl.style.opacity = '0.5';
+        this.dragState.originalEl.style.zIndex = '100';
+    }
+
+    handleMouseMove(e) {
+        if (!this.dragState.active) return;
+
+        const y = this.getRelativeY(e);
+
+        if (this.dragState.mode === 'draw') {
+            const currentSlot = this.getSlotFromY(y);
+            const start = Math.min(this.dragState.startSlot, currentSlot);
+            const end = Math.max(this.dragState.startSlot, currentSlot);
+            const height = (end - start + 1) * this.SLOT_HEIGHT;
+
+            this.dragState.ghost.style.top = `${start * this.SLOT_HEIGHT}px`;
+            this.dragState.ghost.style.height = `${height}px`;
+            this.dragState.currentSlot = currentSlot;
+        }
+        else if (this.dragState.mode === 'move') {
+            // Snap to grid visually
+            const rawTop = y - this.dragState.offsetY;
+            const snapSlot = Math.round(rawTop / this.SLOT_HEIGHT);
+            const snapTop = snapSlot * this.SLOT_HEIGHT;
+
+            this.dragState.originalEl.style.top = `${snapTop}px`;
+
+            // Detect column switch
+            const col = this.getColumnFromX(e.clientX);
+            if (col) {
+                this.dragState.originalEl.style.gridColumn = col === 'plan' ? 2 : 3;
+                this.dragState.targetCol = col;
+            }
+            this.dragState.targetSlot = snapSlot;
+        }
+    }
+
+    handleMouseUp(e) {
+        if (!this.dragState.active) return;
+
+        if (this.dragState.mode === 'draw') {
+            this.dragState.ghost.remove();
+
+            // Normalize start/end
+            const s = this.dragState.startSlot;
+            const c = this.dragState.currentSlot;
+            const start = Math.min(s, c);
+            const duration = Math.abs(s - c) + 1;
+
+            // Short delay to prevent accidental tiny drags
+            setTimeout(() => {
+                const title = prompt("Event Title:", "");
+                if (title) {
+                    this.addEvent(start, duration, this.dragState.column, title);
+                }
+            }, 50);
+        }
+        else if (this.dragState.mode === 'move') {
+            this.dragState.originalEl.style.opacity = '1';
+            this.dragState.originalEl.style.zIndex = '';
+
+            const ev = this.dragState.eventRef;
+
+            // Update Data
+            if (this.dragState.targetSlot !== undefined) ev.startSlot = Math.max(0, this.dragState.targetSlot);
+            if (this.dragState.targetCol) ev.type = this.dragState.targetCol;
+
+            this.save();
+            this.renderEvents();
+        }
+
+        this.dragState = { active: false };
+    }
+
+    addEvent(startSlot, duration, type, title) {
+        const newEvent = {
+            id: Date.now(),
+            startSlot,
+            duration,
+            type,
+            title
+        };
+        this.events.push(newEvent);
+        this.save();
+        this.renderEvents();
+    }
+
+    save() {
+        localStorage.setItem('dayPlannerEvents_v2', JSON.stringify(this.events));
+    }
+
+    clearAll() {
+        if(confirm("Clear all events?")) {
+            this.events = [];
+            this.save();
+            this.renderEvents();
+        }
+    }
+
+    // --- Clock & Pomo ---
+
+    startClock() {
+        const update = () => {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes();
+            const totalMins = (h * 60) + m;
+            const top = (totalMins / this.SLOT_MINS) * this.SLOT_HEIGHT;
+
+            const marker = document.getElementById('nowMarker');
+            marker.style.top = `${top}px`;
+
+            // If it's the first load, maybe scroll to now?
+            // Optional
+        };
+        update();
+        setInterval(update, 60000); // Every minute
+    }
+
+    setupPomodoro() {
+        let interval;
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        const display = document.getElementById('pomoTimer');
+        const btn = document.getElementById('btnPomo');
+
+        if(Notification.permission !== 'granted') Notification.requestPermission();
+
+        btn.addEventListener('click', () => {
+            if (isRunning) {
+                clearInterval(interval);
+                isRunning = false;
+                btn.innerText = "Resume";
+            } else {
+                isRunning = true;
+                btn.innerText = "Pause";
+                interval = setInterval(() => {
+                    timeLeft--;
+                    const m = Math.floor(timeLeft / 60);
+                    const s = timeLeft % 60;
+                    display.innerText = `${m}:${String(s).padStart(2,'0')}`;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(interval);
+                        isRunning = false;
+                        timeLeft = 25 * 60;
+                        display.innerText = "25:00";
+                        btn.innerText = "Start Focus";
+                        this.completePomo();
+                    }
+                }, 1000);
+            }
+        });
+    }
+
+    completePomo() {
+        new Notification("Pomodoro Complete!");
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play().catch(()=>{});
+
+        // Add 25 min block ending now
+        const now = new Date();
+        const totalMins = (now.getHours() * 60) + now.getMinutes();
+        const endSlot = Math.floor(totalMins / this.SLOT_MINS);
+        // 2 slots approx 30 mins, or explicit 25 logic.
+        // Let's do 2 slots (30m) ending at current time
+        const startSlot = Math.max(0, endSlot - 2);
+
+        this.addEvent(startSlot, 2, 'actual', '🍅 Deep Work');
+    }
+}
+
+// Start App
+const app = new DayPlanner();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Day Planner</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --slot-border: #e9ecef;
+            --highlight-plan: #d1e7dd;
+            --highlight-actual: #cfe2ff;
+            --border-color: #dee2e6;
+            --time-width: 70px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 30px 20px;
+            background-color: var(--bg-color);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Header & Controls --- */
+        header {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ced4da;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #212529;
+            color: white;
+            border-color: #212529;
+        }
+
+        button.active-timer {
+            background: #e63946;
+            color: white;
+            border-color: #e63946;
+        }
+
+        .pomo-display {
+            font-family: 'SF Mono', 'Roboto Mono', monospace;
+            font-size: 1.2rem;
+            width: 70px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* --- Grid Layout --- */
+        .planner-container {
+            display: grid;
+            grid-template-columns: var(--time-width) 1fr 1fr;
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            overflow: hidden; /* Keeps borders clean */
+        }
+
+        /* Grid Headers */
+        .header-cell {
+            background: #f1f3f5;
+            padding: 12px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-cell.time-col { border-right: 1px solid var(--border-color); }
+
+        /* Grid Slots */
+        .time-label {
+            padding-right: 15px;
+            font-size: 0.75rem;
+            color: #adb5bd;
+            border-bottom: 1px solid var(--slot-border);
+            border-right: 1px solid var(--border-color);
+            height: 30px; /* 15 min * 2px per min approx, fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            user-select: none;
+            background: #fcfcfc;
+        }
+
+        .slot {
+            border-bottom: 1px dotted var(--slot-border);
+            border-right: 1px solid var(--slot-border);
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding-left: 8px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            transition: background 0.1s;
+        }
+
+        .slot:hover { background-color: #f8f9fa; }
+        .slot:last-child { border-right: none; }
+
+        /* Hour markers */
+        .time-label.hour {
+            border-bottom: 1px solid #ced4da;
+            color: #495057;
+            font-weight: bold;
+        }
+        .slot.hour-border { border-bottom: 1px solid #ced4da; }
+
+        /* Selection & States */
+        .slot.selected { background-color: #e9ecef; }
+
+        .slot.planned {
+            background-color: var(--highlight-plan);
+            border-left: 4px solid #198754;
+            color: #0f5132;
+        }
+
+        .slot.actual {
+            background-color: var(--highlight-actual);
+            border-left: 4px solid #0d6efd;
+            color: #084298;
+        }
+
+        /* --- Printing --- */
+        @media print {
+            .no-print { display: none !important; }
+            body {
+                background: white;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .planner-container {
+                box-shadow: none;
+                border: 2px solid #000;
+                border-radius: 0;
+            }
+            .header-cell { background-color: #eee !important; color: black; border-bottom: 2px solid black; }
+            .slot { border-bottom: 1px solid #ccc; }
+            .slot.hour-border { border-bottom: 1px solid #000; }
+
+            /* Force colors to print nicely */
+            .slot.planned { background-color: #f0f0f0 !important; border-left: 4px solid #333 !important; color: black; }
+            .slot.actual { background-color: #e0e0e0 !important; border-left: 4px solid #666 !important; color: black; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="no-print">
+        <h1>Daily Architect</h1>
+        <div class="controls">
+            <span id="pomoTimer" class="pomo-display">25:00</span>
+            <button id="btnPomo">Start Focus</button>
+            <button onclick="window.print()">Print</button>
+            <button onclick="clearDay()">Clear All</button>
+        </div>
+    </header>
+
+    <div class="planner-container" id="grid">
+        <!-- Grid is generated entirely by JS to prevent sync issues -->
+    </div>
+
+<script>
+    // --- Configuration ---
+    const CONFIG = {
+        startHour: 5,   // 5 AM
+        endHour: 29,    // 5 AM next day
+        slotMinutes: 15 // 15 min increments
+    };
+
+    // State
+    const grid = document.getElementById('grid');
+    let isDragging = false;
+    let dragStartInfo = null; // { index, type }
+    let selectedSlots = [];
+    let currentColumn = null;
+
+    // --- Initialization ---
+    function initGrid() {
+        // 1. Wipe everything clean
+        grid.innerHTML = '';
+
+        // 2. Re-create Headers
+        const headers = ['Time', 'Plan', 'Actual'];
+        headers.forEach((text, i) => {
+            const div = document.createElement('div');
+            div.className = `header-cell ${i === 0 ? 'time-col' : ''}`;
+            div.innerText = text;
+            grid.appendChild(div);
+        });
+
+        // 3. Generate Time Slots
+        const totalSlots = (CONFIG.endHour - CONFIG.startHour) * (60 / CONFIG.slotMinutes);
+
+        for (let i = 0; i < totalSlots; i++) {
+            const totalMinutes = (CONFIG.startHour * 60) + (i * CONFIG.slotMinutes);
+            const hour = Math.floor(totalMinutes / 60) % 24;
+            const minutes = totalMinutes % 60;
+            const isHourStart = minutes === 0;
+
+            const timeStr = `${String(hour).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+
+            // A. Time Label
+            const timeDiv = document.createElement('div');
+            timeDiv.className = `time-label ${isHourStart ? 'hour' : ''}`;
+            timeDiv.innerText = isHourStart ? timeStr : '';
+            grid.appendChild(timeDiv);
+
+            // B. Plan Slot
+            createInteractableSlot(i, 'plan', isHourStart);
+
+            // C. Actual Slot
+            createInteractableSlot(i, 'actual', isHourStart);
+        }
+
+        // 4. Apply Saved Data
+        loadData();
+    }
+
+    function createInteractableSlot(index, type, isHourStart) {
+        const div = document.createElement('div');
+        div.className = `slot ${isHourStart ? 'hour-border' : ''}`;
+        div.dataset.index = index;
+        div.dataset.type = type;
+
+        // Mouse Events
+        div.addEventListener('mousedown', handleMouseDown);
+        div.addEventListener('mouseenter', handleMouseEnter);
+        div.addEventListener('mouseup', handleMouseUp);
+
+        grid.appendChild(div);
+    }
+
+    // --- User Interaction ---
+    function handleMouseDown(e) {
+        if(e.button !== 0) return; // Left click only
+
+        isDragging = true;
+        const index = parseInt(e.target.dataset.index);
+        const type = e.target.dataset.type;
+
+        dragStartInfo = { index, type };
+        currentColumn = type;
+
+        clearSelection();
+        highlightSlot(e.target);
+    }
+
+    function handleMouseEnter(e) {
+        if (!isDragging) return;
+        if (e.target.dataset.type !== currentColumn) return; // Strict column constraint
+
+        const currentIndex = parseInt(e.target.dataset.index);
+        selectRange(dragStartInfo.index, currentIndex);
+    }
+
+    function handleMouseUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        if (selectedSlots.length > 0) {
+            // Small delay to let UI render selection before alert/prompt pauses thread
+            setTimeout(() => {
+                const task = prompt("What is this block for? (Leave empty to clear)", "");
+                if (task !== null) {
+                    saveBlock(selectedSlots, currentColumn, task);
+                }
+                clearSelection();
+            }, 10);
+        }
+    }
+
+    function selectRange(start, end) {
+        clearSelection();
+        const low = Math.min(start, end);
+        const high = Math.max(start, end);
+
+        for (let i = low; i <= high; i++) {
+            const el = document.querySelector(`.slot[data-index="${i}"][data-type="${currentColumn}"]`);
+            if(el) {
+                el.classList.add('selected');
+                selectedSlots.push(i);
+            }
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        selectedSlots = [];
+    }
+
+    function highlightSlot(el) {
+        el.classList.add('selected');
+        selectedSlots.push(parseInt(el.dataset.index));
+    }
+
+    // --- Data Persistence ---
+    function saveBlock(indices, type, text) {
+        let blocks = JSON.parse(localStorage.getItem('dayPlannerData') || '[]');
+
+        // 1. Remove any existing blocks in this specific range/type to avoid overlap
+        blocks = blocks.filter(b => !(b.type === type && indices.includes(b.index)));
+
+        // 2. If text provided, add new blocks
+        if (text && text.trim() !== "") {
+            indices.forEach((index, i) => {
+                blocks.push({
+                    index: index,
+                    type: type,
+                    text: i === 0 ? text : '', // Only store text on first slot of group
+                    colorGroup: indices[0] // ID to link them if needed later
+                });
+            });
+        }
+
+        localStorage.setItem('dayPlannerData', JSON.stringify(blocks));
+
+        // 3. Optimized Re-render (Load data onto existing grid instead of full DOM rebuild)
+        // Note: For simplicity and robustness, we do a full init here, but it's fast enough.
+        initGrid();
+    }
+
+    function loadData() {
+        const blocks = JSON.parse(localStorage.getItem('dayPlannerData') || '[]');
+        blocks.forEach(block => {
+            const el = document.querySelector(`.slot[data-index="${block.index}"][data-type="${block.type}"]`);
+            if (el) {
+                el.classList.add(block.type);
+                if (block.text) {
+                    el.innerText = block.text;
+                    el.style.fontWeight = "600";
+                }
+            }
+        });
+    }
+
+    function clearDay() {
+        if(confirm("Are you sure you want to clear the entire schedule?")) {
+            localStorage.removeItem('dayPlannerData');
+            initGrid();
+        }
+    }
+
+    // --- Pomodoro Logic ---
+    let pomoInterval;
+    let timeLeft = 25 * 60;
+    let isRunning = false;
+    const timerDisplay = document.getElementById('pomoTimer');
+    const btnPomo = document.getElementById('btnPomo');
+
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+
+    btnPomo.addEventListener('click', () => {
+        if (isRunning) {
+            pausePomo();
+        } else {
+            startPomo();
+        }
+    });
+
+    function startPomo() {
+        isRunning = true;
+        btnPomo.innerText = "Pause";
+        btnPomo.classList.add('active-timer');
+
+        pomoInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+
+            if (timeLeft <= 0) {
+                completePomo();
+            }
+        }, 1000);
+    }
+
+    function pausePomo() {
+        clearInterval(pomoInterval);
+        isRunning = false;
+        btnPomo.innerText = "Resume";
+        btnPomo.classList.remove('active-timer');
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        timerDisplay.innerText = `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function completePomo() {
+        pausePomo(); // Stop interval
+        timeLeft = 25 * 60;
+        updateTimerDisplay();
+        btnPomo.innerText = "Start Focus";
+
+        // Notify
+        if(Notification.permission === "granted") {
+            new Notification("Session Complete", { body: "Time to log your progress!" });
+        }
+
+        // Sound
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play().catch(e => {}); // Ignore interaction errors
+
+        autoFillActual();
+    }
+
+    function autoFillActual() {
+        const now = new Date();
+        let h = now.getHours();
+        const m = now.getMinutes();
+
+        // Handle "Late Night" logic (e.g. 1 AM is hour 25 relative to previous day start)
+        if (h < CONFIG.startHour) {
+            h += 24;
+        }
+
+        // Calculate slot index
+        // Formula: (CurrentHour - StartHour) * 4 + (Minutes / 15)
+        const hourDiff = h - CONFIG.startHour;
+        if (hourDiff < 0) return; // Time is before start hour (e.g. 4am)
+
+        const quarterIndex = Math.floor(m / 15);
+        const baseIndex = (hourDiff * 4) + quarterIndex;
+
+        // Log last 2 slots (30 mins)
+        // Check bounds
+        const indices = [];
+        if (baseIndex >= 0) indices.push(baseIndex);
+        if (baseIndex - 1 >= 0) indices.push(baseIndex - 1);
+
+        if (indices.length > 0) {
+            saveBlock(indices, 'actual', '🍅 Deep Work');
+        }
+    }
+
+    // Boot
+    initGrid();
+
+    // Global mouse up to catch drags that end outside the grid
+    document.addEventListener('mouseup', () => {
+        if(isDragging) {
+            isDragging = false;
+            clearSelection();
+        }
+    });
+
+</script>
+</body>
+</html>
