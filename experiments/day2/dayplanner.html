@@ -7,9 +7,10 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
+      font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      background: #FFF8E7;
+      color: #3a3a3a;
       min-height: 100vh;
     }
 
@@ -18,217 +19,235 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 20px;
-      background: #16213e;
-      border-bottom: 1px solid #0f3460;
+      padding: 8px 16px;
+      background: #f5f0e1;
+      border-bottom: 1px solid #e0d9c8;
     }
     .date-nav {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
     .date-nav button {
-      background: #0f3460;
-      border: none;
-      color: #eee;
-      padding: 8px 14px;
-      border-radius: 4px;
+      background: #fff;
+      border: 1px solid #d0c9b8;
+      color: #3a3a3a;
+      padding: 4px 10px;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 11px;
+      font-family: inherit;
     }
-    .date-nav button:hover { background: #1a4a7a; }
+    .date-nav button:hover { background: #f9f6ee; border-color: #b0a998; }
     .current-date {
-      font-size: 18px;
-      font-weight: 600;
-      min-width: 140px;
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 160px;
       text-align: center;
+      color: #2a2a2a;
     }
     .pomodoro-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .pomodoro-btn {
-      background: #e94560;
+      background: #c9462c;
       border: none;
       color: white;
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 4px 12px;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 11px;
+      font-family: inherit;
       font-weight: 500;
     }
-    .pomodoro-btn:hover { background: #ff6b6b; }
-    .pomodoro-btn.cancel { background: #666; }
-    .pomodoro-btn.cancel:hover { background: #888; }
+    .pomodoro-btn:hover { background: #b53d25; }
+    .pomodoro-btn.cancel { background: #888; }
+    .pomodoro-btn.cancel:hover { background: #777; }
     .pomodoro-timer {
-      font-size: 20px;
-      font-weight: bold;
-      color: #e94560;
-      min-width: 60px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #c9462c;
+      min-width: 50px;
     }
 
     /* Main layout */
     .main {
       display: grid;
-      grid-template-columns: 1fr 1fr 300px;
-      height: calc(100vh - 110px);
+      grid-template-columns: 1fr 1fr 260px;
+      height: calc(100vh - 76px);
     }
 
     /* Timeline columns */
     .timeline-column {
-      border-right: 1px solid #0f3460;
+      border-right: 1px solid #e0d9c8;
       overflow-y: auto;
+      background: #fffcf5;
     }
     .column-header {
       position: sticky;
       top: 0;
-      background: #16213e;
-      padding: 10px;
+      background: #f5f0e1;
+      padding: 6px;
       text-align: center;
       font-weight: 600;
-      border-bottom: 1px solid #0f3460;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 1px solid #e0d9c8;
       z-index: 10;
     }
     .timeline {
       position: relative;
-      height: calc(24 * 60px);
+      height: calc(24 * 48px);
     }
     .hour-row {
-      height: 60px;
-      border-bottom: 1px solid #0f3460;
+      height: 48px;
+      border-bottom: 1px solid #ebe6d9;
       position: relative;
     }
     .hour-label {
       position: absolute;
-      left: 4px;
-      top: 2px;
-      font-size: 11px;
-      color: #666;
+      left: 3px;
+      top: 1px;
+      font-size: 9px;
+      color: #999;
     }
-    .hour-row:hover { background: rgba(15, 52, 96, 0.3); }
+    .hour-row:hover { background: rgba(0, 0, 0, 0.02); }
 
     /* Entries */
     .entry {
       position: absolute;
-      left: 40px;
-      right: 8px;
-      background: #0f3460;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
+      left: 32px;
+      right: 4px;
+      background: #fff;
+      border-radius: 2px;
+      padding: 2px 6px;
+      font-size: 11px;
       overflow: hidden;
       cursor: grab;
-      border-left: 3px solid #4a9eff;
-      min-height: 20px;
+      border-left: 2px solid #7a9ec2;
+      min-height: 18px;
       user-select: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     }
     .entry.dragging {
       cursor: grabbing;
-      opacity: 0.8;
+      opacity: 0.85;
       z-index: 100;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
     }
     .entry.pomodoro {
-      background: #3d1a1a;
-      border-left-color: #e94560;
+      background: #fff5f3;
+      border-left-color: #c9462c;
     }
     .entry.pomodoro.completed {
-      background: #1a3d1a;
-      border-left-color: #4ade80;
+      background: #f3f9f3;
+      border-left-color: #5a9a5a;
     }
     .entry-text {
       outline: none;
-      min-height: 16px;
+      min-height: 14px;
       word-break: break-word;
       cursor: text;
+      line-height: 1.3;
     }
     .entry-text:empty:before {
-      content: 'Click to add text...';
-      color: #666;
+      content: 'Add text...';
+      color: #aaa;
     }
     .entry-delete {
       position: absolute;
-      top: 2px;
-      right: 4px;
+      top: 1px;
+      right: 2px;
       background: none;
       border: none;
-      color: #888;
+      color: #bbb;
       cursor: pointer;
-      font-size: 14px;
-      padding: 2px 6px;
+      font-size: 12px;
+      padding: 1px 4px;
       border-radius: 2px;
       opacity: 0;
-      transition: opacity 0.15s;
+      transition: opacity 0.1s;
+      line-height: 1;
     }
     .entry:hover .entry-delete { opacity: 1; }
-    .entry-delete:hover { color: #e94560; background: rgba(233, 69, 96, 0.2); }
+    .entry-delete:hover { color: #c9462c; background: rgba(201, 70, 44, 0.1); }
     .entry-resize {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 6px;
+      height: 5px;
       cursor: ns-resize;
     }
     .entry-time {
-      font-size: 10px;
-      color: #888;
-      margin-bottom: 2px;
+      font-size: 9px;
+      color: #999;
+      margin-bottom: 1px;
     }
 
     /* Notes sidebar */
     .notes-panel {
-      background: #16213e;
+      background: #f9f6ee;
       display: flex;
       flex-direction: column;
+      border-left: 1px solid #e0d9c8;
     }
     .notes-header {
-      padding: 10px;
+      padding: 6px;
       text-align: center;
       font-weight: 600;
-      border-bottom: 1px solid #0f3460;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 1px solid #e0d9c8;
     }
     .notes-content {
       flex: 1;
-      padding: 12px;
+      padding: 10px;
       outline: none;
       overflow-y: auto;
       white-space: pre-wrap;
       line-height: 1.5;
+      font-size: 11px;
     }
     .notes-content:empty:before {
-      content: 'Write your notes here...';
-      color: #666;
+      content: 'Notes...';
+      color: #aaa;
     }
 
     /* Footer */
     .footer {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      padding: 12px;
-      background: #16213e;
-      border-top: 1px solid #0f3460;
+      gap: 10px;
+      padding: 8px;
+      background: #f5f0e1;
+      border-top: 1px solid #e0d9c8;
     }
     .footer button {
-      background: #0f3460;
-      border: none;
-      color: #eee;
-      padding: 8px 16px;
-      border-radius: 4px;
+      background: #fff;
+      border: 1px solid #d0c9b8;
+      color: #3a3a3a;
+      padding: 4px 12px;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 11px;
+      font-family: inherit;
     }
-    .footer button:hover { background: #1a4a7a; }
+    .footer button:hover { background: #f9f6ee; border-color: #b0a998; }
 
     /* Current time indicator */
     .current-time-line {
       position: absolute;
       left: 0;
       right: 0;
-      height: 2px;
-      background: #e94560;
+      height: 1px;
+      background: #c9462c;
       z-index: 5;
       pointer-events: none;
     }
@@ -236,10 +255,10 @@
       content: '';
       position: absolute;
       left: 0;
-      top: -4px;
-      width: 10px;
-      height: 10px;
-      background: #e94560;
+      top: -3px;
+      width: 7px;
+      height: 7px;
+      background: #c9462c;
       border-radius: 50%;
     }
   </style>
@@ -369,12 +388,14 @@
       });
     }
 
+    const PX_PER_MIN = 48 / 60; // 48px per hour
+
     function renderEntry(container, entry, type, isPomodoro) {
       const el = document.createElement('div');
       el.className = 'entry' + (isPomodoro ? ' pomodoro' : '') + (entry.completed ? ' completed' : '');
 
-      const topPx = (entry.hour * 60 + entry.minutes);
-      const heightPx = Math.max(entry.durationMins, 15);
+      const topPx = (entry.hour * 60 + entry.minutes) * PX_PER_MIN;
+      const heightPx = Math.max(entry.durationMins * PX_PER_MIN, 12);
       el.style.top = topPx + 'px';
       el.style.height = heightPx + 'px';
       el.dataset.id = entry.id;
@@ -437,7 +458,7 @@
       if (state.currentDate !== getTodayStr()) return;
 
       const now = new Date();
-      const topPx = now.getHours() * 60 + now.getMinutes();
+      const topPx = (now.getHours() * 60 + now.getMinutes()) * PX_PER_MIN;
 
       ['plansTimeline', 'actualsTimeline'].forEach(id => {
         const line = document.createElement('div');
@@ -452,10 +473,11 @@
       // Don't create if clicking on an entry
       if (event.target.closest('.entry')) return;
 
-      // Calculate minutes from click position
+      // Calculate minutes from click position (48px per hour)
       const rect = event.currentTarget.getBoundingClientRect();
       const relativeY = event.clientY - rect.top;
-      const minutes = Math.floor(relativeY / 15) * 15; // Snap to 15-min
+      const minutesInHour = (relativeY / 48) * 60;
+      const minutes = Math.floor(minutesInHour / 15) * 15; // Snap to 15-min
 
       addEntry(type, hour, minutes);
     }
@@ -544,7 +566,8 @@
       if (!resizeState) return;
 
       const deltaY = e.clientY - resizeState.startY;
-      const newDuration = Math.max(15, Math.round((resizeState.startHeight + deltaY) / 15) * 15);
+      const deltaMins = deltaY / PX_PER_MIN;
+      const newDuration = Math.max(15, Math.round((resizeState.startHeight + deltaMins) / 15) * 15);
 
       const dayData = getDayData();
       const entry = dayData[resizeState.type].find(en => en.id === resizeState.entry.id);
@@ -571,7 +594,7 @@
       e.stopPropagation();
 
       const rect = container.getBoundingClientRect();
-      const entryTop = entry.hour * 60 + entry.minutes;
+      const entryTopMins = entry.hour * 60 + entry.minutes;
 
       dragState = {
         entry,
@@ -581,7 +604,7 @@
         container,
         containerRect: rect,
         startY: e.clientY,
-        startTop: entryTop,
+        startTopMins: entryTopMins,
         scrollTop: container.parentElement.scrollTop
       };
 
@@ -593,18 +616,19 @@
     function doDrag(e) {
       if (!dragState) return;
 
-      const { element, containerRect, startY, startTop, container } = dragState;
+      const { element, startY, startTopMins, container } = dragState;
       const scrollDelta = container.parentElement.scrollTop - dragState.scrollTop;
       const deltaY = e.clientY - startY + scrollDelta;
-      const newTop = Math.max(0, Math.min(24 * 60 - 15, startTop + deltaY));
-      const snappedTop = Math.round(newTop / 15) * 15;
+      const deltaMins = deltaY / PX_PER_MIN;
+      const newTopMins = Math.max(0, Math.min(24 * 60 - 15, startTopMins + deltaMins));
+      const snappedMins = Math.round(newTopMins / 15) * 15;
 
-      element.style.top = snappedTop + 'px';
+      element.style.top = (snappedMins * PX_PER_MIN) + 'px';
 
       // Update time display
-      const newHour = Math.floor(snappedTop / 60);
-      const newMinutes = snappedTop % 60;
-      const endMin = snappedTop + dragState.entry.durationMins;
+      const newHour = Math.floor(snappedMins / 60);
+      const newMinutes = snappedMins % 60;
+      const endMin = snappedMins + dragState.entry.durationMins;
       const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
       const timeEl = element.querySelector('.entry-time');
       const isPomodoro = dragState.isPomodoro;
@@ -614,9 +638,10 @@
     function endDrag() {
       if (dragState) {
         const { entry, type, isPomodoro, element } = dragState;
-        const newTop = parseInt(element.style.top);
-        const newHour = Math.floor(newTop / 60);
-        const newMinutes = newTop % 60;
+        const newTopPx = parseFloat(element.style.top);
+        const newTopMins = Math.round(newTopPx / PX_PER_MIN);
+        const newHour = Math.floor(newTopMins / 60);
+        const newMinutes = newTopMins % 60;
 
         // Update the entry in data
         const dayData = getDayData();
