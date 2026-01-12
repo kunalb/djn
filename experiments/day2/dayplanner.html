@@ -56,6 +56,20 @@
       align-items: center;
       gap: 10px;
     }
+    .icon-btn {
+      background: none;
+      border: 1px solid #d0c9b8;
+      color: #666;
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-btn:hover { background: #f9f6ee; border-color: #b0a998; color: #333; }
     .pomodoro-btn {
       background: #c9462c;
       border: none;
@@ -301,27 +315,6 @@
       color: #aaa;
     }
 
-    /* Footer */
-    .footer {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      padding: 8px;
-      background: #f5f0e1;
-      border-top: 1px solid #e0d9c8;
-    }
-    .footer button {
-      background: #fff;
-      border: 1px solid #d0c9b8;
-      color: #3a3a3a;
-      padding: 4px 12px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 11px;
-      font-family: inherit;
-    }
-    .footer button:hover { background: #f9f6ee; border-color: #b0a998; }
-
     /* Current time indicator */
     .current-time-line {
       position: absolute;
@@ -352,6 +345,9 @@
       <button onclick="changeDay(1)">Next &rarr;</button>
     </div>
     <div class="pomodoro-controls">
+      <button class="icon-btn" onclick="exportAllDays()" title="Export all days">&#8595;</button>
+      <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="Import">&#8593;</button>
+      <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importFromFile(event)">
       <span class="pomodoro-timer" id="pomodoroTimer"></span>
       <button class="pomodoro-btn" id="pomodoroBtn" onclick="togglePomodoro()">Start Pomodoro</button>
     </div>
@@ -376,12 +372,6 @@
     </div>
   </div>
 
-  <div class="footer">
-    <button onclick="exportAsText()">Export Day</button>
-    <button onclick="exportAllDays()">Export All</button>
-    <button onclick="document.getElementById('importFile').click()">Import</button>
-    <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importFromFile(event)">
-  </div>
 
   <script>
     // ============ STATE ============
@@ -434,6 +424,7 @@
 
     // ============ RENDERING ============
     function render() {
+      document.title = state.currentDate;
       document.getElementById('currentDate').textContent = formatDate(state.currentDate);
       renderTimeline('plans', 'plansTimeline');
       renderTimeline('actuals', 'actualsTimeline');
@@ -1097,10 +1088,21 @@
       }
     }
 
+    function scrollToCurrentTime() {
+      if (state.currentDate !== getTodayStr()) return;
+
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      const scrollPx = Math.max(0, (currentMins * PX_PER_MIN) - 100); // 100px offset from top
+
+      document.getElementById('actualsColumn').scrollTop = scrollPx;
+    }
+
     function init() {
       restoreActivePomodoro();
       render();
       setupScrollSync();
+      scrollToCurrentTime();
 
       // Update time line every minute
       setInterval(renderCurrentTimeLine, 60000);
