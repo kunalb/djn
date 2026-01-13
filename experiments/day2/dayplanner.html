@@ -596,7 +596,7 @@
         if (e.button !== 0) return; // Left click only
 
         const rect = container.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top + container.parentElement.scrollTop;
+        const relativeY = e.clientY - rect.top; // rect already accounts for scroll
         const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
 
         // Create preview element
@@ -625,7 +625,7 @@
       const { container, preview, startMins, scrollTop } = createState;
       const rect = container.getBoundingClientRect();
       const scrollDelta = container.parentElement.scrollTop - scrollTop;
-      const relativeY = e.clientY - rect.top + container.parentElement.scrollTop;
+      const relativeY = e.clientY - rect.top; // rect already accounts for scroll
       const currentMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
 
       const minStart = Math.min(startMins, currentMins);
