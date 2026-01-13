@@ -288,6 +288,15 @@
       color: #999;
       margin-bottom: 1px;
     }
+    .entry-preview {
+      position: absolute;
+      left: 32px;
+      right: 4px;
+      background: rgba(122, 158, 194, 0.3);
+      border-radius: 2px;
+      border-left: 2px solid #7a9ec2;
+      pointer-events: none;
+    }
 
     /* Notes sidebar */
     .notes-panel {
@@ -446,7 +455,7 @@
       // Build hour rows
       let html = '';
       for (let h = 0; h < 24; h++) {
-        html += `<div class="hour-row" data-hour="${h}" onclick="handleHourClick(event, '${type}', ${h})">
+        html += `<div class="hour-row" data-hour="${h}">
           <span class="hour-label">${formatTime(h, 0)}</span>
         </div>`;
       }
@@ -456,6 +465,9 @@
       entries.forEach(entry => {
         renderEntry(container, entry, type);
       });
+
+      // Setup drag-to-create
+      setupCreateDrag(container, type);
     }
 
     function renderPomodoroGutter() {
@@ -559,26 +571,82 @@
     }
 
     // ============ ENTRY MANAGEMENT ============
-    function handleHourClick(event, type, hour) {
-      // Don't create if clicking on an entry
-      if (event.target.closest('.entry')) return;
+    let createState = null;
 
-      // Calculate minutes from click position (48px per hour)
-      const rect = event.currentTarget.getBoundingClientRect();
-      const relativeY = event.clientY - rect.top;
-      const minutesInHour = (relativeY / 48) * 60;
-      const minutes = Math.floor(minutesInHour / 15) * 15; // Snap to 15-min
+    function setupCreateDrag(container, type) {
+      container.addEventListener('mousedown', (e) => {
+        // Don't create if clicking on an entry
+        if (e.target.closest('.entry')) return;
+        if (e.button !== 0) return; // Left click only
 
-      addEntry(type, hour, minutes);
+        const rect = container.getBoundingClientRect();
+        const relativeY = e.clientY - rect.top + container.parentElement.scrollTop;
+        const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+
+        // Create preview element
+        const preview = document.createElement('div');
+        preview.className = 'entry-preview';
+        preview.style.top = (startMins * PX_PER_MIN) + 'px';
+        preview.style.height = (15 * PX_PER_MIN) + 'px';
+        container.appendChild(preview);
+
+        createState = {
+          type,
+          container,
+          preview,
+          startMins,
+          scrollTop: container.parentElement.scrollTop
+        };
+
+        document.addEventListener('mousemove', doCreateDrag);
+        document.addEventListener('mouseup', endCreateDrag);
+      });
     }
 
-    function addEntry(type, hour, minutes) {
+    function doCreateDrag(e) {
+      if (!createState) return;
+
+      const { container, preview, startMins, scrollTop } = createState;
+      const rect = container.getBoundingClientRect();
+      const scrollDelta = container.parentElement.scrollTop - scrollTop;
+      const relativeY = e.clientY - rect.top + container.parentElement.scrollTop;
+      const currentMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+
+      const minStart = Math.min(startMins, currentMins);
+      const maxEnd = Math.max(startMins, currentMins);
+      const duration = Math.max(15, maxEnd - minStart + 15);
+
+      preview.style.top = (minStart * PX_PER_MIN) + 'px';
+      preview.style.height = (duration * PX_PER_MIN) + 'px';
+
+      createState.currentStart = minStart;
+      createState.duration = duration;
+    }
+
+    function endCreateDrag(e) {
+      if (createState) {
+        const { type, preview, startMins, currentStart, duration } = createState;
+        preview.remove();
+
+        const finalStart = currentStart !== undefined ? currentStart : startMins;
+        const finalDuration = duration || 30;
+        const hour = Math.floor(finalStart / 60);
+        const minutes = finalStart % 60;
+
+        addEntry(type, hour, minutes, finalDuration);
+        createState = null;
+      }
+      document.removeEventListener('mousemove', doCreateDrag);
+      document.removeEventListener('mouseup', endCreateDrag);
+    }
+
+    function addEntry(type, hour, minutes, durationMins = 30) {
       const dayData = getDayData();
       const entry = {
         id: type.charAt(0) + '_' + Date.now(),
         hour,
         minutes,
-        durationMins: 30,
+        durationMins,
         text: ''
       };
       dayData[type].push(entry);
@@ -760,6 +828,7 @@
 
     function startPomodoro() {
       const now = new Date();
+      const dateStr = state.currentDate;
       const pom = {
         id: 'pom_' + Date.now(),
         hour: now.getHours(),
@@ -768,11 +837,13 @@
         text: '',
         completed: false,
         active: true,
-        startTime: Date.now()
+        startTime: Date.now(),
+        dateStr // Store which day this pomodoro belongs to
       };
 
       getDayData().pomodoros.push(pom);
       state.activePomodoro = pom;
+      state.activePomodoroDate = dateStr; // Track the date separately
       saveAllData();
       render();
 
@@ -800,12 +871,14 @@
     function completePomodoro() {
       if (!state.activePomodoro) return;
 
-      // Find and update the pomodoro
-      const dayData = getDayData();
-      const pom = dayData.pomodoros.find(p => p.id === state.activePomodoro.id);
-      if (pom) {
-        pom.completed = true;
-        pom.active = false;
+      // Find and update the pomodoro in the day it was created
+      const dateStr = state.activePomodoroDate || state.activePomodoro.dateStr;
+      if (dateStr && state.data[dateStr]) {
+        const pom = state.data[dateStr].pomodoros.find(p => p.id === state.activePomodoro.id);
+        if (pom) {
+          pom.completed = true;
+          pom.active = false;
+        }
       }
 
       clearPomodoro();
@@ -821,9 +894,13 @@
     function cancelPomodoro() {
       if (!state.activePomodoro) return;
 
-      // Remove the pomodoro entirely
-      const dayData = getDayData();
-      dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== state.activePomodoro.id);
+      // Remove the pomodoro from the day it was created
+      const dateStr = state.activePomodoroDate || state.activePomodoro.dateStr;
+      if (dateStr && state.data[dateStr]) {
+        state.data[dateStr].pomodoros = state.data[dateStr].pomodoros.filter(
+          p => p.id !== state.activePomodoro.id
+        );
+      }
 
       clearPomodoro();
       saveAllData();
@@ -832,6 +909,7 @@
 
     function clearPomodoro() {
       state.activePomodoro = null;
+      state.activePomodoroDate = null;
       if (state.pomodoroInterval) {
         clearInterval(state.pomodoroInterval);
         state.pomodoroInterval = null;
@@ -1083,6 +1161,7 @@
           } else {
             // Still running - restore it
             state.activePomodoro = activePom;
+            state.activePomodoroDate = dateStr; // Track which day it belongs to
             state.currentDate = dateStr; // Switch to that day
             updatePomodoroBtn();
             state.pomodoroInterval = setInterval(updatePomodoroTimer, 1000);
