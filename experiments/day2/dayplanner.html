@@ -217,6 +217,14 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
     }
+    .pom-preview {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      background: rgba(201, 70, 44, 0.3);
+      border-radius: 2px;
+      pointer-events: none;
+    }
 
     /* Timeline columns */
     .timeline-column {
@@ -483,16 +491,16 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
     }
 
-    function getDayData() {
-      if (!state.data[state.currentDate]) {
-        state.data[state.currentDate] = {
+    function getDayData(dateStr = state.currentDate) {
+      if (!state.data[dateStr]) {
+        state.data[dateStr] = {
           plans: [],
           actuals: [],
           pomodoros: [],
           notes: ''
         };
       }
-      return state.data[state.currentDate];
+      return state.data[dateStr];
     }
 
     // ============ RENDERING ============
@@ -550,6 +558,8 @@
 
         container.appendChild(el);
       });
+
+      setupPomCreateDrag(container);
     }
 
     const PX_PER_MIN = 48 / 60; // 48px per hour
@@ -702,6 +712,91 @@
       }
       document.removeEventListener('mousemove', doCreateDrag);
       document.removeEventListener('mouseup', endCreateDrag);
+    }
+
+    // Pomodoro drag-to-create
+    let pomCreateState = null;
+    const pomCreateDragSetup = new WeakSet();
+
+    function setupPomCreateDrag(container) {
+      if (pomCreateDragSetup.has(container)) return;
+      pomCreateDragSetup.add(container);
+
+      container.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.pom-marker')) return;
+        if (e.button !== 0) return;
+
+        const rect = container.getBoundingClientRect();
+        const relativeY = e.clientY - rect.top;
+        const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+
+        const preview = document.createElement('div');
+        preview.className = 'pom-preview';
+        preview.style.top = (startMins * PX_PER_MIN) + 'px';
+        preview.style.height = (25 * PX_PER_MIN) + 'px'; // Default 25 min
+        container.appendChild(preview);
+
+        pomCreateState = {
+          container,
+          preview,
+          startMins
+        };
+
+        document.addEventListener('mousemove', doPomCreateDrag);
+        document.addEventListener('mouseup', endPomCreateDrag);
+      });
+    }
+
+    function doPomCreateDrag(e) {
+      if (!pomCreateState) return;
+
+      const { container, preview, startMins } = pomCreateState;
+      const rect = container.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+      const currentMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+
+      const minStart = Math.min(startMins, currentMins);
+      const maxEnd = Math.max(startMins, currentMins);
+      const duration = Math.max(15, maxEnd - minStart + 15);
+
+      preview.style.top = (minStart * PX_PER_MIN) + 'px';
+      preview.style.height = (duration * PX_PER_MIN) + 'px';
+
+      pomCreateState.currentStart = minStart;
+      pomCreateState.duration = duration;
+    }
+
+    function endPomCreateDrag(e) {
+      if (pomCreateState) {
+        const { preview, startMins, currentStart, duration } = pomCreateState;
+        preview.remove();
+
+        const finalStart = currentStart !== undefined ? currentStart : startMins;
+        const finalDuration = duration || 25;
+        const hour = Math.floor(finalStart / 60);
+        const minutes = finalStart % 60;
+
+        addManualPomodoro(hour, minutes, finalDuration);
+        pomCreateState = null;
+      }
+      document.removeEventListener('mousemove', doPomCreateDrag);
+      document.removeEventListener('mouseup', endPomCreateDrag);
+    }
+
+    function addManualPomodoro(hour, minutes, durationMins = 25) {
+      const dayData = getDayData();
+      const pom = {
+        id: 'pom_' + Date.now(),
+        hour,
+        minutes,
+        durationMins,
+        text: '',
+        completed: false,
+        active: false
+      };
+      dayData.pomodoros.push(pom);
+      saveAllData();
+      render();
     }
 
     function addEntry(type, hour, minutes, durationMins = 30) {
@@ -894,7 +989,7 @@
 
     function startPomodoro() {
       const now = new Date();
-      const dateStr = state.currentDate;
+      const todayStr = getTodayStr();
       const pom = {
         id: 'pom_' + Date.now(),
         hour: now.getHours(),
@@ -904,12 +999,12 @@
         completed: false,
         active: true,
         startTime: Date.now(),
-        dateStr // Store which day this pomodoro belongs to
+        dateStr: todayStr // Store which day this pomodoro belongs to
       };
 
-      getDayData().pomodoros.push(pom);
+      getDayData(todayStr).pomodoros.push(pom);
       state.activePomodoro = pom;
-      state.activePomodoroDate = dateStr; // Track the date separately
+      state.activePomodoroDate = todayStr; // Track the date separately
       saveAllData();
       render();
 
@@ -1216,7 +1311,7 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.0.0';
+    const APP_VERSION = '1.1.0';
     const APP_UPDATED = '2025-01-13';
 
     function showVersionInfo() {
