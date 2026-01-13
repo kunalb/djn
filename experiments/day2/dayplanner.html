@@ -964,7 +964,7 @@
       // Save to the day that was active when we started editing
       const dateToSave = notesDateWhenFocused || state.currentDate;
       if (state.data[dateToSave]) {
-        state.data[dateToSave].notes = this.textContent;
+        state.data[dateToSave].notes = this.innerText; // innerText preserves line breaks
         saveAllData();
       }
       notesDateWhenFocused = null;
