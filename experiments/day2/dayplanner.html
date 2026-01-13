@@ -96,6 +96,45 @@
       min-width: 50px;
     }
 
+    /* Version modal */
+    .version-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .version-overlay.show { display: flex; }
+    .version-modal {
+      background: #fff;
+      border: 1px solid #d0c9b8;
+      border-radius: 4px;
+      padding: 16px 24px;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .version-modal h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2a2a2a;
+    }
+    .version-modal p {
+      margin: 6px 0;
+      font-size: 11px;
+      color: #666;
+    }
+    .version-modal .version-label {
+      color: #999;
+      display: inline-block;
+      width: 60px;
+    }
+
     /* Main layout */
     .main {
       display: grid;
@@ -375,6 +414,15 @@
       <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importFromFile(event)">
       <span class="pomodoro-timer" id="pomodoroTimer"></span>
       <button class="pomodoro-btn" id="pomodoroBtn" onclick="togglePomodoro()">Start Pomodoro</button>
+      <button class="icon-btn" onclick="showVersionInfo()" title="About">?</button>
+    </div>
+  </div>
+
+  <div class="version-overlay" id="versionOverlay" onclick="hideVersionInfo(event)">
+    <div class="version-modal" onclick="event.stopPropagation()">
+      <h3>Day Planner</h3>
+      <p><span class="version-label">Version:</span> <span id="versionNumber">1.0.0</span></p>
+      <p><span class="version-label">Updated:</span> <span id="versionDate">2025-01-13</span></p>
     </div>
   </div>
 
@@ -1166,6 +1214,26 @@
       actuals.addEventListener('scroll', () => syncScroll(actuals));
       gutter.addEventListener('scroll', () => syncScroll(gutter));
     }
+
+    // ============ VERSION INFO ============
+    const APP_VERSION = '1.0.0';
+    const APP_UPDATED = '2025-01-13';
+
+    function showVersionInfo() {
+      document.getElementById('versionNumber').textContent = APP_VERSION;
+      document.getElementById('versionDate').textContent = APP_UPDATED;
+      document.getElementById('versionOverlay').classList.add('show');
+    }
+
+    function hideVersionInfo(e) {
+      if (!e || e.target === document.getElementById('versionOverlay')) {
+        document.getElementById('versionOverlay').classList.remove('show');
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideVersionInfo();
+    });
 
     // ============ INIT ============
     function restoreActivePomodoro() {
