@@ -523,10 +523,11 @@
 
       el.innerHTML = `
         <div class="entry-time">${timeStr} - ${endTimeStr}</div>
-        <div class="entry-text" contenteditable="true">${entry.text || ''}</div>
+        <div class="entry-text" contenteditable="true"></div>
         <button class="entry-delete" onclick="deleteEntry(event, '${type}', '${entry.id}')">&times;</button>
         <div class="entry-resize"></div>
       `;
+      el.querySelector('.entry-text').textContent = entry.text || '';
 
       // Double-click to duplicate plan to actual
       if (type === 'plans') {
@@ -583,8 +584,12 @@
 
     // ============ ENTRY MANAGEMENT ============
     let createState = null;
+    const createDragSetup = new WeakSet(); // Track which containers have listeners
 
     function setupCreateDrag(container, type) {
+      if (createDragSetup.has(container)) return; // Already setup
+      createDragSetup.add(container);
+
       container.addEventListener('mousedown', (e) => {
         // Don't create if clicking on an entry
         if (e.target.closest('.entry')) return;
@@ -737,7 +742,9 @@
 
       const deltaY = e.clientY - resizeState.startY;
       const deltaMins = deltaY / PX_PER_MIN;
-      const newDuration = Math.max(15, Math.round((resizeState.startHeight + deltaMins) / 15) * 15);
+      const entryStartMins = resizeState.entry.hour * 60 + resizeState.entry.minutes;
+      const maxDuration = 24 * 60 - entryStartMins; // Can't extend past midnight
+      const newDuration = Math.max(15, Math.min(maxDuration, Math.round((resizeState.startHeight + deltaMins) / 15) * 15));
 
       const dayData = getDayData();
       const entry = dayData[resizeState.type].find(en => en.id === resizeState.entry.id);
@@ -949,9 +956,18 @@
     }
 
     // ============ NOTES ============
+    let notesDateWhenFocused = null;
+    document.getElementById('notesContent').addEventListener('focus', function() {
+      notesDateWhenFocused = state.currentDate;
+    });
     document.getElementById('notesContent').addEventListener('blur', function() {
-      getDayData().notes = this.textContent;
-      saveAllData();
+      // Save to the day that was active when we started editing
+      const dateToSave = notesDateWhenFocused || state.currentDate;
+      if (state.data[dateToSave]) {
+        state.data[dateToSave].notes = this.textContent;
+        saveAllData();
+      }
+      notesDateWhenFocused = null;
     });
 
     // ============ EXPORT ============
