@@ -93,6 +93,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
 
         match input.trim().to_lowercase().as_str() {
             "y" | "yes" | "" => {
+                eprintln!(); // blank line before output
                 return ConfirmResult::Yes;
             }
             "n" | "no" | "q" => {
@@ -100,6 +101,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
             }
             "e" | "edit" => {
                 if let Some(edited) = edit_command(command) {
+                    eprintln!(); // blank line before output
                     return ConfirmResult::Edit(edited);
                 }
                 // Show command again for retry

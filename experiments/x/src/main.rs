@@ -131,7 +131,7 @@ fn main() {
     if cli.yes {
         // Auto-run mode - show in box style then run
         eprintln!("\x1b[90m│\x1b[0m \x1b[1m{}\x1b[0m", command);
-        eprintln!("\x1b[90m└\x1b[0m");
+        eprintln!("\x1b[90m└\x1b[0m\n");
         let exit_code = execute_command(&command);
         std::process::exit(exit_code);
     }
