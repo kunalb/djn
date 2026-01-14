@@ -14,7 +14,7 @@ impl Provider {
         match s.to_lowercase().as_str() {
             "claude" | "anthropic" => Some(Provider::Claude),
             "gemini" | "google" => Some(Provider::Gemini),
-            "openai" | "gpt" | "chatgpt" => Some(Provider::OpenAI),
+            "openai" | "gpt" | "chatgpt" | "codex" => Some(Provider::OpenAI),
             _ => None,
         }
     }
@@ -23,15 +23,17 @@ impl Provider {
         match self {
             Provider::Claude => "claude",
             Provider::Gemini => "gemini",
-            Provider::OpenAI => "openai",
+            Provider::OpenAI => "codex",
         }
     }
 
     pub fn is_available(&self) -> bool {
-        Command::new("which")
-            .arg(self.cli_name())
-            .output()
-            .map(|o| o.status.success())
+        // Use user's shell interactively to check, so aliases/functions are resolved
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
+        Command::new(&shell)
+            .args(["-ic", &format!("command -v {} >/dev/null 2>&1", self.cli_name())])
+            .status()
+            .map(|s| s.success())
             .unwrap_or(false)
     }
 
@@ -75,50 +77,50 @@ pub fn generate_command(
 }
 
 fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    let mut cmd = Command::new("claude");
-    cmd.args(["--print", prompt]);
+    // Map short names to full model names
+    let model_arg = model.map(|m| match m {
+        "opus" => "claude-opus-4-20250514",
+        "sonnet" => "claude-sonnet-4-20250514",
+        _ => m,
+    });
 
-    if let Some(m) = model {
-        // Map short names to full model names
-        let full_model = match m {
-            "opus" => "claude-opus-4-20250514",
-            "sonnet" => "claude-sonnet-4-20250514",
-            _ => m,
-        };
-        cmd.args(["--model", full_model]);
-    }
+    let model_flag = model_arg
+        .map(|m| format!(" --model {}", shell_escape(m)))
+        .unwrap_or_default();
 
-    run_command(cmd, "claude")
+    let shell_cmd = format!("claude --print {}{}", shell_escape(prompt), model_flag);
+    run_shell_command(&shell_cmd, "claude")
 }
 
 fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    let mut cmd = Command::new("gemini");
+    let model_flag = model
+        .map(|m| format!(" -m {}", shell_escape(m)))
+        .unwrap_or_default();
 
-    if let Some(m) = model {
-        cmd.args(["-m", m]);
-    }
-
-    cmd.arg(prompt);
-
-    run_command(cmd, "gemini")
+    let shell_cmd = format!("gemini{} {}", model_flag, shell_escape(prompt));
+    run_shell_command(&shell_cmd, "gemini")
 }
 
 fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    // Try 'openai' CLI first, fall back to other common CLI tools
-    let mut cmd = Command::new("openai");
-    cmd.args(["api", "chat.completions.create"]);
+    // Use codex CLI (OpenAI's official CLI)
+    let model_flag = model
+        .map(|m| format!(" -m {}", shell_escape(m)))
+        .unwrap_or_default();
 
-    if let Some(m) = model {
-        cmd.args(["-m", m]);
-    }
-
-    cmd.args(["-g", "user", prompt]);
-
-    run_command(cmd, "openai")
+    let shell_cmd = format!("codex exec -o /dev/stdout{} {}", model_flag, shell_escape(prompt));
+    run_shell_command(&shell_cmd, "codex")
 }
 
-fn run_command(mut cmd: Command, name: &str) -> Result<String, String> {
-    let output = cmd
+fn shell_escape(s: &str) -> String {
+    // Use single quotes and escape any single quotes within
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+fn run_shell_command(cmd: &str, name: &str) -> Result<String, String> {
+    // Use user's shell interactively so aliases/functions are available
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
+    let output = Command::new(&shell)
+        .args(["-ic", cmd])
         .output()
         .map_err(|e| format!("Failed to run {}: {}", name, e))?;
 
