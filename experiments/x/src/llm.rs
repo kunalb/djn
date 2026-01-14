@@ -145,14 +145,34 @@ fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, Str
     let exe = Provider::OpenAI.find_executable()
         .ok_or_else(|| "codex CLI not found".to_string())?;
 
+    // Use temp file for output (codex duplicates when using /dev/stdout)
+    let tmp_file = format!("/tmp/x-codex-{}", std::process::id());
+
     let mut cmd = Command::new(&exe);
-    cmd.args(["exec", "-o", "/dev/stdout"]);
+    cmd.args(["exec", "-o", &tmp_file]);
     if let Some(m) = model {
         cmd.args(["-m", m]);
     }
     cmd.arg(prompt);
 
-    run_command(cmd, "codex")
+    // Codex writes UI to stderr, suppress it
+    cmd.stderr(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::null());
+
+    let status = cmd
+        .stdin(std::process::Stdio::null())
+        .status()
+        .map_err(|e| format!("Failed to run codex: {}", e))?;
+
+    let output = std::fs::read_to_string(&tmp_file)
+        .unwrap_or_default();
+    let _ = std::fs::remove_file(&tmp_file);
+
+    if !status.success() {
+        return Err("codex failed".to_string());
+    }
+
+    Ok(clean_command_output(&output))
 }
 
 fn run_command(mut cmd: Command, name: &str) -> Result<String, String> {
