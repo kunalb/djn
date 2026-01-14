@@ -46,6 +46,15 @@ fn main() {
         return;
     }
 
+    // Handle --config flag
+    if cli.config {
+        if let Err(e) = Config::edit() {
+            eprintln!("\x1b[31merror:\x1b[0m {}", e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
     let config = Config::load();
 
     // Gather context

@@ -52,9 +52,15 @@ impl Config {
         Config::default()
     }
 
-    fn config_path() -> PathBuf {
-        dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
+    pub fn config_path() -> PathBuf {
+        // Respect XDG_CONFIG_HOME, fall back to ~/.config
+        std::env::var("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                dirs::home_dir()
+                    .unwrap_or_else(|| PathBuf::from("."))
+                    .join(".config")
+            })
             .join("x")
             .join("config.toml")
     }
@@ -66,5 +72,54 @@ impl Config {
             "gemini" => self.gemini.model.clone(),
             _ => None,
         }
+    }
+
+    /// Open config in $EDITOR, creating template if needed
+    pub fn edit() -> Result<(), String> {
+        let path = Self::config_path();
+
+        // Create parent directory if needed
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        }
+
+        // Create template if file doesn't exist
+        if !path.exists() {
+            std::fs::write(&path, Self::template())
+                .map_err(|e| format!("Failed to write config template: {}", e))?;
+        }
+
+        // Get editor from $EDITOR or $VISUAL, fall back to vi
+        let editor = std::env::var("EDITOR")
+            .or_else(|_| std::env::var("VISUAL"))
+            .unwrap_or_else(|_| "vi".to_string());
+
+        // Open editor
+        std::process::Command::new(&editor)
+            .arg(&path)
+            .status()
+            .map_err(|e| format!("Failed to open {}: {}", editor, e))?;
+
+        Ok(())
+    }
+
+    fn template() -> &'static str {
+        r#"# x configuration
+# Default provider: gemini, claude, or codex
+default_provider = "gemini"
+
+[gemini]
+# model = "gemini-2.5-flash"
+# model = "gemini-2.5-pro"
+
+[claude]
+# model = "claude-sonnet-4-20250514"
+# model = "claude-opus-4-20250514"
+
+[openai]
+# model = "gpt-4o"
+# model = "o3"
+"#
     }
 }
