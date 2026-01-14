@@ -28,13 +28,45 @@ impl Provider {
     }
 
     pub fn is_available(&self) -> bool {
-        // Use user's shell interactively to check, so aliases/functions are resolved
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
-        Command::new(&shell)
-            .args(["-ic", &format!("command -v {} >/dev/null 2>&1", self.cli_name())])
-            .status()
-            .map(|s| s.success())
+        self.find_executable().is_some()
+    }
+
+    /// Find the executable path, checking common locations
+    pub fn find_executable(&self) -> Option<String> {
+        let name = self.cli_name();
+
+        // Check if it's in PATH
+        if Command::new("which")
+            .arg(name)
+            .output()
+            .map(|o| o.status.success())
             .unwrap_or(false)
+        {
+            return Some(name.to_string());
+        }
+
+        // Check common locations
+        let home = std::env::var("HOME").unwrap_or_default();
+        let common_paths: Vec<String> = match self {
+            Provider::Claude => vec![
+                format!("{}/.claude/local/claude", home),
+                format!("{}/.local/bin/claude", home),
+            ],
+            Provider::Gemini => vec![
+                format!("{}/.local/bin/gemini", home),
+            ],
+            Provider::OpenAI => vec![
+                format!("{}/.local/bin/codex", home),
+            ],
+        };
+
+        for path in common_paths {
+            if std::path::Path::new(&path).exists() {
+                return Some(path);
+            }
+        }
+
+        None
     }
 
     pub fn default_model(&self) -> &'static str {
@@ -77,6 +109,9 @@ pub fn generate_command(
 }
 
 fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, String> {
+    let exe = Provider::Claude.find_executable()
+        .ok_or_else(|| "claude CLI not found".to_string())?;
+
     // Map short names to full model names
     let model_arg = model.map(|m| match m {
         "opus" => "claude-opus-4-20250514",
@@ -84,43 +119,45 @@ fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, Str
         _ => m,
     });
 
-    let model_flag = model_arg
-        .map(|m| format!(" --model {}", shell_escape(m)))
-        .unwrap_or_default();
+    let mut cmd = Command::new(&exe);
+    cmd.args(["--print", prompt]);
+    if let Some(m) = model_arg {
+        cmd.args(["--model", m]);
+    }
 
-    let shell_cmd = format!("claude --print {}{}", shell_escape(prompt), model_flag);
-    run_shell_command(&shell_cmd, "claude")
+    run_command(cmd, "claude")
 }
 
 fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    let model_flag = model
-        .map(|m| format!(" -m {}", shell_escape(m)))
-        .unwrap_or_default();
+    let exe = Provider::Gemini.find_executable()
+        .ok_or_else(|| "gemini CLI not found".to_string())?;
 
-    let shell_cmd = format!("gemini{} {}", model_flag, shell_escape(prompt));
-    run_shell_command(&shell_cmd, "gemini")
+    let mut cmd = Command::new(&exe);
+    if let Some(m) = model {
+        cmd.args(["-m", m]);
+    }
+    cmd.arg(prompt);
+
+    run_command(cmd, "gemini")
 }
 
 fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    // Use codex CLI (OpenAI's official CLI)
-    let model_flag = model
-        .map(|m| format!(" -m {}", shell_escape(m)))
-        .unwrap_or_default();
+    let exe = Provider::OpenAI.find_executable()
+        .ok_or_else(|| "codex CLI not found".to_string())?;
 
-    let shell_cmd = format!("codex exec -o /dev/stdout{} {}", model_flag, shell_escape(prompt));
-    run_shell_command(&shell_cmd, "codex")
+    let mut cmd = Command::new(&exe);
+    cmd.args(["exec", "-o", "/dev/stdout"]);
+    if let Some(m) = model {
+        cmd.args(["-m", m]);
+    }
+    cmd.arg(prompt);
+
+    run_command(cmd, "codex")
 }
 
-fn shell_escape(s: &str) -> String {
-    // Use single quotes and escape any single quotes within
-    format!("'{}'", s.replace('\'', "'\\''"))
-}
-
-fn run_shell_command(cmd: &str, name: &str) -> Result<String, String> {
-    // Use user's shell interactively so aliases/functions are available
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
-    let output = Command::new(&shell)
-        .args(["-ic", cmd])
+fn run_command(mut cmd: Command, name: &str) -> Result<String, String> {
+    let output = cmd
+        .stdin(std::process::Stdio::null())
         .output()
         .map_err(|e| format!("Failed to run {}: {}", name, e))?;
 
