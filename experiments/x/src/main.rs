@@ -55,7 +55,12 @@ fn main() {
     if cli.context {
         eprintln!("\x1b[1;33m=== Captured Context ===\x1b[0m");
         eprintln!("{}", context.format_for_prompt());
-        eprintln!("\x1b[1;33m========================\x1b[0m\n");
+        eprintln!("\x1b[1;33m========================\x1b[0m");
+        // Exit if no request provided (just introspection)
+        if cli.request.is_empty() {
+            return;
+        }
+        eprintln!();
     }
 
     // Determine provider
