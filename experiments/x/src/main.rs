@@ -103,10 +103,10 @@ fn main() {
     // Generate command
     let request = cli.request_string();
 
-    // Build spinner message with model info
+    // Build spinner message with provider/model info
     let model_display = model_ref
-        .map(|m| m.to_string())
-        .unwrap_or_else(|| provider.default_model().to_string());
+        .map(|m| format!("{}/{}", provider.display_name(), m))
+        .unwrap_or_else(|| provider.display_name().to_string());
 
     // Show spinner while generating (unless dry-run for cleaner output)
     let spinner = if cli.dry_run {

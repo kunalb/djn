@@ -69,11 +69,11 @@ impl Provider {
         None
     }
 
-    pub fn default_model(&self) -> &'static str {
+    pub fn display_name(&self) -> &'static str {
         match self {
-            Provider::Claude => "claude-sonnet-4-5-20250514",
-            Provider::Gemini => "gemini-2.5-flash",
-            Provider::OpenAI => "gpt-4o",
+            Provider::Claude => "claude",
+            Provider::Gemini => "gemini",
+            Provider::OpenAI => "codex",
         }
     }
 }
@@ -135,10 +135,12 @@ fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, Str
     let exe = Provider::Gemini.find_executable()
         .ok_or_else(|| "gemini CLI not found".to_string())?;
 
-    let model = model.unwrap_or(Provider::Gemini.default_model());
+    let mut cmd = Command::new(&exe);
+    if let Some(m) = model {
+        cmd.args(["-m", m]);
+    }
 
-    let mut child = Command::new(&exe)
-        .args(["-m", model])
+    let mut child = cmd
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
