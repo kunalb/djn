@@ -97,15 +97,13 @@ fn main() {
     // Build spinner message with model info
     let model_display = model_ref
         .map(|m| m.to_string())
-        .or_else(|| Some(provider.default_model().to_string()))
-        .unwrap();
-    let spinner_msg = format!("{} ({})", provider.cli_name(), model_display);
+        .unwrap_or_else(|| provider.default_model().to_string());
 
     // Show spinner while generating (unless dry-run for cleaner output)
     let spinner = if cli.dry_run {
         None
     } else {
-        Some(Spinner::new(&spinner_msg))
+        Some(Spinner::new(&model_display))
     };
 
     let command = match generate_command(provider, model_ref, &request, &context) {
@@ -131,8 +129,9 @@ fn main() {
     }
 
     if cli.yes {
-        // Auto-run mode - show command then run
-        eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", command);
+        // Auto-run mode - show in box style then run
+        eprintln!("\x1b[90m│\x1b[0m \x1b[1m{}\x1b[0m", command);
+        eprintln!("\x1b[90m└\x1b[0m");
         let exit_code = execute_command(&command);
         std::process::exit(exit_code);
     }
