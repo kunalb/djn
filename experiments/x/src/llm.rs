@@ -72,7 +72,7 @@ impl Provider {
     pub fn default_model(&self) -> &'static str {
         match self {
             Provider::Claude => "claude-sonnet-4-20250514",
-            Provider::Gemini => "gemini-2.0-flash",
+            Provider::Gemini => "gemini-2.5-flash",
             Provider::OpenAI => "gpt-4o",
         }
     }
@@ -129,16 +129,34 @@ fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, Str
 }
 
 fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, String> {
+    use std::io::Write;
+
     let exe = Provider::Gemini.find_executable()
         .ok_or_else(|| "gemini CLI not found".to_string())?;
 
-    let mut cmd = Command::new(&exe);
-    if let Some(m) = model {
-        cmd.args(["-m", m]);
-    }
-    cmd.arg(prompt);
+    let model = model.unwrap_or(Provider::Gemini.default_model());
 
-    run_command(cmd, "gemini")
+    let mut child = Command::new(&exe)
+        .args(["-m", model])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to run gemini: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(prompt.as_bytes());
+    }
+
+    let output = child.wait_with_output()
+        .map_err(|e| format!("Failed to wait for gemini: {}", e))?;
+
+    if !output.status.success() {
+        return Err("gemini failed".to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(clean_command_output(&stdout))
 }
 
 fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, String> {

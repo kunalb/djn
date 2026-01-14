@@ -23,7 +23,7 @@ pub struct ProviderConfig {
 }
 
 fn default_provider() -> String {
-    "claude".to_string()
+    "gemini".to_string()
 }
 
 impl Default for Config {
