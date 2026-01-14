@@ -15,20 +15,22 @@ pub enum ConfirmResult {
 pub struct Spinner {
     running: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
+    start: std::time::Instant,
+    message: String,
 }
 
 impl Spinner {
     pub fn new(message: &str) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
-        let message = message.to_string();
+        let message_clone = message.to_string();
 
         let handle = thread::spawn(move || {
             let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let mut i = 0;
 
             while running_clone.load(Ordering::Relaxed) {
-                eprint!("\r\x1b[90m{} {}\x1b[0m\x1b[K", frames[i], message);
+                eprint!("\r\x1b[90m{} {}\x1b[0m\x1b[K", frames[i], message_clone);
                 let _ = io::stderr().flush();
                 i = (i + 1) % frames.len();
                 thread::sleep(Duration::from_millis(80));
@@ -38,17 +40,41 @@ impl Spinner {
         Spinner {
             running,
             handle: Some(handle),
+            start: std::time::Instant::now(),
+            message: message.to_string(),
         }
     }
 
-    pub fn stop(self) {
+    pub fn stop(self) -> Duration {
+        let elapsed = self.start.elapsed();
         self.running.store(false, Ordering::Relaxed);
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        // Clear the spinner line
-        eprint!("\r\x1b[K");
+        // Replace spinner with completed message
+        let duration_str = format_duration(elapsed);
+        eprint!("\r\x1b[90m✓ {} ({})\x1b[0m\x1b[K\n", self.message, duration_str);
         let _ = io::stderr().flush();
+        elapsed
+    }
+
+    pub fn stop_error(self) {
+        self.running.store(false, Ordering::Relaxed);
+        if let Some(handle) = self.handle {
+            let _ = handle.join();
+        }
+        // Replace spinner with error indicator
+        eprint!("\r\x1b[90m✗ {}\x1b[0m\x1b[K\n", self.message);
+        let _ = io::stderr().flush();
+    }
+}
+
+fn format_duration(d: Duration) -> String {
+    let ms = d.as_millis();
+    if ms < 1000 {
+        format!("{}ms", ms)
+    } else {
+        format!("{:.1}s", d.as_secs_f64())
     }
 }
 

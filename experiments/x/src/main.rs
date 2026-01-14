@@ -94,23 +94,30 @@ fn main() {
     // Generate command
     let request = cli.request_string();
 
+    // Build spinner message with model info
+    let model_display = model_ref
+        .map(|m| m.to_string())
+        .or_else(|| Some(provider.default_model().to_string()))
+        .unwrap();
+    let spinner_msg = format!("{} ({})", provider.cli_name(), model_display);
+
     // Show spinner while generating (unless dry-run for cleaner output)
     let spinner = if cli.dry_run {
         None
     } else {
-        Some(Spinner::new("thinking..."))
+        Some(Spinner::new(&spinner_msg))
     };
 
     let command = match generate_command(provider, model_ref, &request, &context) {
         Ok(cmd) => {
             if let Some(s) = spinner {
-                s.stop();
+                let _ = s.stop();
             }
             cmd
         }
         Err(e) => {
             if let Some(s) = spinner {
-                s.stop();
+                s.stop_error();
             }
             eprintln!("\x1b[1;31merror:\x1b[0m {}", e);
             std::process::exit(1);

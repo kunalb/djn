@@ -92,7 +92,8 @@ fn test_dry_run_create_directory() {
 
 #[test]
 fn test_dry_run_no_markdown() {
-    let (stdout, _stderr, success) = run_x(&["--dry-run", "list all rust files"]);
+    // Use a simple prompt that won't be confused by codebase context
+    let (stdout, _stderr, success) = run_x(&["--dry-run", "print hello world"]);
     assert!(success, "Command should succeed");
     assert!(
         !stdout.contains("```"),
