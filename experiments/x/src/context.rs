@@ -127,8 +127,13 @@ impl Context {
 
         if let Some(tmux) = &self.tmux_content {
             // Truncate if too long
+            // Truncate at char boundary, not byte boundary
             let truncated = if tmux.len() > 2000 {
-                format!("{}...(truncated)", &tmux[..2000])
+                let mut end = 2000;
+                while !tmux.is_char_boundary(end) && end > 0 {
+                    end -= 1;
+                }
+                format!("{}...(truncated)", &tmux[..end])
             } else {
                 tmux.clone()
             };
