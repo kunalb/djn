@@ -129,9 +129,10 @@ fn main() {
     }
 
     if cli.yes {
-        // Auto-run mode - show in box style then run
+        // Auto-run mode - show command and run
         eprintln!("│ \x1b[1m{}\x1b[0m", command);
-        eprintln!("└\n");
+        eprintln!("└");
+        eprintln!();
         let exit_code = execute_command(&command);
         std::process::exit(exit_code);
     }

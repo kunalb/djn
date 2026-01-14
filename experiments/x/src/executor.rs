@@ -30,7 +30,7 @@ impl Spinner {
             let mut i = 0;
 
             while running_clone.load(Ordering::Relaxed) {
-                eprint!("\r┌ {} {} \x1b[K", model_clone, frames[i]);
+                eprint!("\r- {} {} \x1b[K", model_clone, frames[i]);
                 let _ = io::stderr().flush();
                 i = (i + 1) % frames.len();
                 thread::sleep(Duration::from_millis(80));
@@ -51,9 +51,9 @@ impl Spinner {
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        // Show completed state
+        // Clear spinner line, print box header
         let duration_str = format_duration(elapsed);
-        eprint!("\r┌ {} \x1b[90m({})\x1b[0m\x1b[K\n", self.model, duration_str);
+        eprint!("\r\x1b[K┌ {} \x1b[90m({})\x1b[0m\n", self.model, duration_str);
         let _ = io::stderr().flush();
         elapsed
     }
@@ -63,7 +63,8 @@ impl Spinner {
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        eprint!("\r┌ {} \x1b[31m✗\x1b[0m\x1b[K\n", self.model);
+        // Clear spinner line, show error
+        eprint!("\r\x1b[K\x1b[31merror:\x1b[0m ");
         let _ = io::stderr().flush();
     }
 }
