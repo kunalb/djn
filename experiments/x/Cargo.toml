@@ -1,0 +1,17 @@
+[package]
+name = "x"
+version = "0.1.0"
+edition = "2021"
+description = "Fast terminal LLM command generator"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"
