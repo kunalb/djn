@@ -1191,6 +1191,7 @@
 
       updatePomodoroBtn();
       state.pomodoroInterval = setInterval(updatePomodoroTimer, 1000);
+      updatePomodoroTimer(); // Update immediately
     }
 
     function updatePomodoroTimer() {

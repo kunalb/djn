@@ -1,0 +1,49 @@
+[colors]
+# Cosmic Latte - High Contrast Color Scheme for WezTerm
+
+# Main colors
+foreground = "#000000"
+background = "#FFF8E7"
+
+# Cursor
+cursor_fg = "#FFF8E7"
+cursor_bg = "#000000"
+cursor_border = "#000000"
+
+# Selection
+selection_fg = "#FFF8E7"
+selection_bg = "#1a1a1a"
+
+# Scrollbar
+scrollbar_thumb = "#4a4a4a"
+
+# Split line
+split = "#666666"
+
+# ANSI colors (high contrast for light background)
+ansi = [
+    "#000000",  # black
+    "#a80000",  # red (dark, saturated)
+    "#006800",  # green (dark, saturated)
+    "#7a5600",  # yellow/brown (dark for visibility)
+    "#0030a0",  # blue (dark, saturated)
+    "#800080",  # magenta (dark, saturated)
+    "#006878",  # cyan (dark, saturated)
+    "#505050",  # white (dark gray for contrast)
+]
+
+# Bright ANSI colors
+brights = [
+    "#303030",  # bright black (dark gray)
+    "#d00000",  # bright red
+    "#008000",  # bright green
+    "#906800",  # bright yellow/brown
+    "#0040d0",  # bright blue
+    "#a000a0",  # bright magenta
+    "#008090",  # bright cyan
+    "#000000",  # bright white (black for max contrast)
+]
+
+[metadata]
+name = "Cosmic Latte"
+author = "Custom"
