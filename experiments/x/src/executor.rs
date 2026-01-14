@@ -1,5 +1,9 @@
 use std::io::{self, Write};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 pub enum ConfirmResult {
     Yes,
@@ -7,13 +11,57 @@ pub enum ConfirmResult {
     Edit(String),
 }
 
+/// Spinner that runs in a background thread
+pub struct Spinner {
+    running: Arc<AtomicBool>,
+    handle: Option<thread::JoinHandle<()>>,
+}
+
+impl Spinner {
+    pub fn new(message: &str) -> Self {
+        let running = Arc::new(AtomicBool::new(true));
+        let running_clone = running.clone();
+        let message = message.to_string();
+
+        let handle = thread::spawn(move || {
+            let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+            let mut i = 0;
+
+            while running_clone.load(Ordering::Relaxed) {
+                eprint!("\r\x1b[90m{} {}\x1b[0m\x1b[K", frames[i], message);
+                let _ = io::stderr().flush();
+                i = (i + 1) % frames.len();
+                thread::sleep(Duration::from_millis(80));
+            }
+        });
+
+        Spinner {
+            running,
+            handle: Some(handle),
+        }
+    }
+
+    pub fn stop(self) {
+        self.running.store(false, Ordering::Relaxed);
+        if let Some(handle) = self.handle {
+            let _ = handle.join();
+        }
+        // Clear the spinner line
+        eprint!("\r\x1b[K");
+        let _ = io::stderr().flush();
+    }
+}
+
 pub fn confirm_command(command: &str) -> ConfirmResult {
-    // Display the command
-    println!("\n\x1b[1;36m{}\x1b[0m\n", command);
+    // Display the command in a clean format
+    eprintln!();
+    eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", command);
+    eprintln!();
 
     loop {
-        print!("\x1b[1m[y]es / [n]o / [e]dit > \x1b[0m");
-        io::stdout().flush().unwrap();
+        // Subtle inline prompt
+        eprint!("\x1b[90mrun? [Y/n/e] \x1b[0m");
+        io::stderr().flush().unwrap();
 
         let mut input = String::new();
         if io::stdin().read_line(&mut input).is_err() {
@@ -21,31 +69,45 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
         }
 
         match input.trim().to_lowercase().as_str() {
-            "y" | "yes" | "" => return ConfirmResult::Yes,
-            "n" | "no" => return ConfirmResult::No,
+            "y" | "yes" | "" => {
+                // Move up and clear the prompt, then show running indicator
+                eprint!("\x1b[1A\x1b[K");
+                eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", command);
+                return ConfirmResult::Yes;
+            }
+            "n" | "no" | "q" => {
+                eprint!("\x1b[1A\x1b[K");
+                eprintln!("  \x1b[90m❯ {}\x1b[0m \x1b[90m(cancelled)\x1b[0m", command);
+                return ConfirmResult::No;
+            }
             "e" | "edit" => {
                 if let Some(edited) = edit_command(command) {
                     return ConfirmResult::Edit(edited);
                 }
-                // If editing failed, show the command again
-                println!("\n\x1b[1;36m{}\x1b[0m\n", command);
+                // Show original again
+                eprintln!();
+                eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", command);
+                eprintln!();
             }
             _ => {
-                println!("Please enter y, n, or e");
+                // Clear invalid input, stay on same line
+                eprint!("\x1b[1A\x1b[K");
             }
         }
     }
 }
 
 fn edit_command(command: &str) -> Option<String> {
-    print!("\x1b[1mEdit command:\x1b[0m ");
-    io::stdout().flush().unwrap();
+    // Clear the prompt line and show edit mode
+    eprint!("\x1b[1A\x1b[K");
+    eprint!("  \x1b[1;33m❯\x1b[0m ");
+    io::stderr().flush().unwrap();
 
-    // Simple inline editing - print the command and let user type a new one
-    // For a more sophisticated approach, we could use a readline library
-    println!("\x1b[90m(current: {})\x1b[0m", command);
-    print!("> ");
-    io::stdout().flush().unwrap();
+    // Try to use readline-style editing by pre-filling
+    // For now, simple input with the original shown
+    eprintln!("\x1b[90m(editing, enter new command or empty to cancel)\x1b[0m");
+    eprint!("  \x1b[1;33m❯\x1b[0m ");
+    io::stderr().flush().unwrap();
 
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_err() {
@@ -56,6 +118,9 @@ fn edit_command(command: &str) -> Option<String> {
     if edited.is_empty() {
         None
     } else {
+        // Show what will run
+        eprint!("\x1b[1A\x1b[K");
+        eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", edited);
         Some(edited.to_string())
     }
 }
@@ -67,9 +132,15 @@ pub fn execute_command(command: &str) -> i32 {
         .status();
 
     match status {
-        Ok(s) => s.code().unwrap_or(1),
+        Ok(s) => {
+            let code = s.code().unwrap_or(1);
+            if code != 0 {
+                eprintln!("\x1b[90mexit {}\x1b[0m", code);
+            }
+            code
+        }
         Err(e) => {
-            eprintln!("\x1b[1;31mFailed to execute: {}\x1b[0m", e);
+            eprintln!("\x1b[1;31mfailed: {}\x1b[0m", e);
             1
         }
     }

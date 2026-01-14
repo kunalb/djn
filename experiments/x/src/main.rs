@@ -9,7 +9,7 @@ use clap::Parser;
 use cli::Cli;
 use config::Config;
 use context::Context;
-use executor::{confirm_command, execute_command, print_command, ConfirmResult};
+use executor::{confirm_command, execute_command, print_command, ConfirmResult, Spinner};
 use llm::{generate_command, Provider};
 
 const ZSH_INIT: &str = r#"x() {
@@ -94,15 +94,25 @@ fn main() {
     // Generate command
     let request = cli.request_string();
 
-    eprint!("\x1b[90mGenerating command...\x1b[0m");
+    // Show spinner while generating (unless dry-run for cleaner output)
+    let spinner = if cli.dry_run {
+        None
+    } else {
+        Some(Spinner::new("thinking..."))
+    };
 
     let command = match generate_command(provider, model_ref, &request, &context) {
         Ok(cmd) => {
-            eprint!("\r\x1b[K"); // Clear the "Generating..." message
+            if let Some(s) = spinner {
+                s.stop();
+            }
             cmd
         }
         Err(e) => {
-            eprintln!("\r\x1b[K\x1b[1;31mError: {}\x1b[0m", e);
+            if let Some(s) = spinner {
+                s.stop();
+            }
+            eprintln!("\x1b[1;31merror:\x1b[0m {}", e);
             std::process::exit(1);
         }
     };
@@ -114,8 +124,8 @@ fn main() {
     }
 
     if cli.yes {
-        // Auto-run mode
-        println!("\x1b[1;36m{}\x1b[0m", command);
+        // Auto-run mode - show command then run
+        eprintln!("  \x1b[1;32m❯\x1b[0m \x1b[1m{}\x1b[0m", command);
         let exit_code = execute_command(&command);
         std::process::exit(exit_code);
     }
@@ -131,7 +141,6 @@ fn main() {
             std::process::exit(exit_code);
         }
         ConfirmResult::No => {
-            eprintln!("\x1b[90mCancelled\x1b[0m");
             std::process::exit(0);
         }
     }
