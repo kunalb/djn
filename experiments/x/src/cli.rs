@@ -1,9 +1,19 @@
 use clap::Parser;
 
+// Build version string with git hash and timestamp
+const VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("BUILD_GIT_HASH"),
+    " ",
+    env!("BUILD_TIMESTAMP"),
+    ")"
+);
+
 #[derive(Parser, Debug)]
 #[command(name = "x")]
 #[command(about = "Fast terminal LLM command generator")]
-#[command(version)]
+#[command(version = VERSION)]
 pub struct Cli {
     /// The natural language request for command generation
     #[arg(trailing_var_arg = true, required_unless_present_any = ["init", "context", "config"])]
