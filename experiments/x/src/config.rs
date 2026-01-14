@@ -110,16 +110,17 @@ impl Config {
 default_provider = "gemini"
 
 [gemini]
-# model = "gemini-2.5-flash"
-# model = "gemini-2.5-pro"
+# model = "gemini-2.5-flash"    # fast (default)
+# model = "gemini-2.5-pro"      # powerful
 
 [claude]
-# model = "claude-sonnet-4-20250514"
-# model = "claude-opus-4-20250514"
+# model = "sonnet"              # alias for latest sonnet (default)
+# model = "opus"                # alias for latest opus
+# model = "haiku"               # alias for latest haiku (fast)
 
 [openai]
-# model = "gpt-4o"
-# model = "o3"
+# model = "gpt-4o"              # general purpose (default)
+# model = "o3"                  # reasoning model
 "#
     }
 }

@@ -71,7 +71,7 @@ impl Provider {
 
     pub fn default_model(&self) -> &'static str {
         match self {
-            Provider::Claude => "claude-sonnet-4-20250514",
+            Provider::Claude => "claude-sonnet-4-5-20250514",
             Provider::Gemini => "gemini-2.5-flash",
             Provider::OpenAI => "gpt-4o",
         }
@@ -114,8 +114,9 @@ fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, Str
 
     // Map short names to full model names
     let model_arg = model.map(|m| match m {
-        "opus" => "claude-opus-4-20250514",
-        "sonnet" => "claude-sonnet-4-20250514",
+        "opus" => "claude-opus-4-5-20250514",
+        "sonnet" => "claude-sonnet-4-5-20250514",
+        "haiku" => "claude-haiku-4-5-20250514",
         _ => m,
     });
 
