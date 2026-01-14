@@ -10,6 +10,70 @@
   <link rel="manifest" href="data:application/json,{%22name%22:%22Day%20Planner%22,%22short_name%22:%22Planner%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23FFF8E7%22,%22theme_color%22:%22%23f5f0e1%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f5f0e1' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' font-size='50'>📅</text></svg>%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
   <title>Day Planner</title>
   <style>
+    :root {
+      --bg-primary: #FFF8E7;
+      --bg-secondary: #f5f0e1;
+      --bg-timeline: #fffcf5;
+      --bg-notes: #f9f6ee;
+      --bg-card: #fff;
+      --bg-plan: #fefefa;
+      --bg-hover: #f9f6ee;
+      --bg-hover-subtle: rgba(0, 0, 0, 0.02);
+      --border: #e0d9c8;
+      --border-button: #d0c9b8;
+      --border-light: #ebe6d9;
+      --border-subtle: #ddd;
+      --text-primary: #3a3a3a;
+      --text-strong: #2a2a2a;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --text-placeholder: #aaa;
+      --text-faint: #bbb;
+      --accent-red: #c9462c;
+      --accent-red-hover: #b53d25;
+      --accent-green: #5a9a5a;
+      --accent-blue: #7a9ec2;
+      --accent-green-soft: #a8b5a0;
+      --cancel-btn: #888;
+      --cancel-btn-hover: #777;
+      --shadow: rgba(0,0,0,0.06);
+      --shadow-strong: rgba(0,0,0,0.12);
+      --overlay: rgba(0,0,0,0.3);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #252525;
+        --bg-timeline: #1e1e1e;
+        --bg-notes: #222;
+        --bg-card: #2a2a2a;
+        --bg-plan: #262626;
+        --bg-hover: #333;
+        --bg-hover-subtle: rgba(255, 255, 255, 0.03);
+        --border: #3a3a3a;
+        --border-button: #444;
+        --border-light: #333;
+        --border-subtle: #444;
+        --text-primary: #e0e0e0;
+        --text-strong: #f0f0f0;
+        --text-secondary: #aaa;
+        --text-muted: #888;
+        --text-placeholder: #666;
+        --text-faint: #555;
+        --accent-red: #e05a40;
+        --accent-red-hover: #c94a30;
+        --accent-green: #6ab06a;
+        --accent-blue: #8ab0d0;
+        --accent-green-soft: #7a9a70;
+        --cancel-btn: #666;
+        --cancel-btn-hover: #777;
+        --shadow: rgba(0,0,0,0.2);
+        --shadow-strong: rgba(0,0,0,0.3);
+        --overlay: rgba(0,0,0,0.5);
+      }
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       height: 100%;
@@ -18,8 +82,8 @@
     body {
       font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
       font-size: 12px;
-      background: #FFF8E7;
-      color: #3a3a3a;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       display: flex;
       flex-direction: column;
     }
@@ -30,8 +94,8 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 16px;
-      background: #f5f0e1;
-      border-bottom: 1px solid #e0d9c8;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
     }
     .date-nav {
       display: flex;
@@ -39,22 +103,22 @@
       gap: 8px;
     }
     .date-nav button {
-      background: #fff;
-      border: 1px solid #d0c9b8;
-      color: #3a3a3a;
+      background: var(--bg-card);
+      border: 1px solid var(--border-button);
+      color: var(--text-primary);
       padding: 4px 10px;
       border-radius: 3px;
       cursor: pointer;
       font-size: 11px;
       font-family: inherit;
     }
-    .date-nav button:hover { background: #f9f6ee; border-color: #b0a998; }
+    .date-nav button:hover { background: var(--bg-hover); border-color: var(--border); }
     .current-date {
       font-size: 13px;
       font-weight: 500;
       min-width: 160px;
       text-align: center;
-      color: #2a2a2a;
+      color: var(--text-strong);
     }
     .pomodoro-controls {
       display: flex;
@@ -63,8 +127,8 @@
     }
     .icon-btn {
       background: none;
-      border: 1px solid #d0c9b8;
-      color: #666;
+      border: 1px solid var(--border-button);
+      color: var(--text-secondary);
       width: 24px;
       height: 24px;
       border-radius: 3px;
@@ -74,9 +138,9 @@
       align-items: center;
       justify-content: center;
     }
-    .icon-btn:hover { background: #f9f6ee; border-color: #b0a998; color: #333; }
+    .icon-btn:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text-strong); }
     .pomodoro-btn {
-      background: #c9462c;
+      background: var(--accent-red);
       border: none;
       color: white;
       padding: 4px 12px;
@@ -86,13 +150,13 @@
       font-family: inherit;
       font-weight: 500;
     }
-    .pomodoro-btn:hover { background: #b53d25; }
-    .pomodoro-btn.cancel { background: #888; }
-    .pomodoro-btn.cancel:hover { background: #777; }
+    .pomodoro-btn:hover { background: var(--accent-red-hover); }
+    .pomodoro-btn.cancel { background: var(--cancel-btn); }
+    .pomodoro-btn.cancel:hover { background: var(--cancel-btn-hover); }
     .pomodoro-timer {
       font-size: 14px;
       font-weight: 600;
-      color: #c9462c;
+      color: var(--accent-red);
       min-width: 50px;
     }
 
@@ -104,41 +168,41 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.3);
+      background: var(--overlay);
       z-index: 1000;
       align-items: center;
       justify-content: center;
     }
     .version-overlay.show { display: flex; }
     .version-modal {
-      background: #fff;
-      border: 1px solid #d0c9b8;
+      background: var(--bg-card);
+      border: 1px solid var(--border-button);
       border-radius: 4px;
       padding: 16px 24px;
       max-width: 300px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 12px var(--shadow-strong);
     }
     .version-modal h3 {
       margin: 0 0 12px 0;
       font-size: 14px;
       font-weight: 600;
-      color: #2a2a2a;
+      color: var(--text-strong);
     }
     .version-modal p {
       margin: 6px 0;
       font-size: 11px;
-      color: #666;
+      color: var(--text-secondary);
     }
     .version-modal .version-label {
-      color: #999;
+      color: var(--text-muted);
       display: inline-block;
       width: 60px;
     }
     .version-modal .built-with {
       margin-top: 12px;
       padding-top: 10px;
-      border-top: 1px solid #e0d9c8;
-      color: #7a9ec2;
+      border-top: 1px solid var(--border);
+      color: var(--accent-blue);
       font-size: 10px;
       text-align: center;
     }
@@ -153,8 +217,8 @@
 
     /* Pomodoro gutter */
     .pomodoro-gutter {
-      background: #f5f0e1;
-      border-right: 1px solid #e0d9c8;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
       overflow-y: auto;
       position: relative;
       scrollbar-width: none;
@@ -166,15 +230,15 @@
     .pomodoro-gutter-header {
       position: sticky;
       top: 0;
-      background: #f5f0e1;
+      background: var(--bg-secondary);
       padding: 6px 2px;
       text-align: center;
       font-weight: 600;
       font-size: 10px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      color: #666;
-      border-bottom: 1px solid #e0d9c8;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
       z-index: 10;
     }
     .pomodoro-gutter-timeline {
@@ -185,7 +249,7 @@
       position: absolute;
       left: 3px;
       right: 3px;
-      background: #c9462c;
+      background: var(--accent-red);
       border-radius: 2px;
       cursor: pointer;
       display: flex;
@@ -196,11 +260,11 @@
     }
     .pom-marker:hover { opacity: 0.8; }
     .pom-marker.active {
-      background: #c9462c;
+      background: var(--accent-red);
       animation: pulse 2s infinite;
     }
     .pom-marker.completed {
-      background: #5a9a5a;
+      background: var(--accent-green);
     }
     .pom-marker-delete {
       position: absolute;
@@ -208,19 +272,19 @@
       right: -4px;
       width: 14px;
       height: 14px;
-      background: #fff;
-      border: 1px solid #ddd;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
       border-radius: 50%;
       font-size: 10px;
       line-height: 12px;
       text-align: center;
-      color: #999;
+      color: var(--text-muted);
       cursor: pointer;
       opacity: 0;
       transition: opacity 0.1s;
     }
     .pom-marker:hover .pom-marker-delete { opacity: 1; }
-    .pom-marker-delete:hover { color: #c9462c; border-color: #c9462c; }
+    .pom-marker-delete:hover { color: var(--accent-red); border-color: var(--accent-red); }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -236,9 +300,9 @@
 
     /* Timeline columns */
     .timeline-column {
-      border-right: 1px solid #e0d9c8;
+      border-right: 1px solid var(--border);
       overflow-y: auto;
-      background: #fffcf5;
+      background: var(--bg-timeline);
     }
     /* Hide scrollbar on plans column */
     #plansColumn {
@@ -251,15 +315,15 @@
     .column-header {
       position: sticky;
       top: 0;
-      background: #f5f0e1;
+      background: var(--bg-secondary);
       padding: 6px;
       text-align: center;
       font-weight: 600;
       font-size: 10px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      color: #666;
-      border-bottom: 1px solid #e0d9c8;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
       z-index: 10;
     }
     .timeline {
@@ -268,7 +332,7 @@
     }
     .hour-row {
       height: 48px;
-      border-bottom: 1px solid #ebe6d9;
+      border-bottom: 1px solid var(--border-light);
       position: relative;
     }
     .hour-label {
@@ -276,42 +340,42 @@
       left: 3px;
       top: 1px;
       font-size: 9px;
-      color: #999;
+      color: var(--text-muted);
     }
-    .hour-row:hover { background: rgba(0, 0, 0, 0.02); }
+    .hour-row:hover { background: var(--bg-hover-subtle); }
 
     /* Entries */
     .entry {
       position: absolute;
       left: 32px;
       right: 4px;
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 2px;
       padding: 2px 6px;
       font-size: 11px;
       overflow: hidden;
       cursor: grab;
-      border-left: 2px solid #7a9ec2;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
+      border-left: 2px solid var(--accent-blue);
+      border-bottom: 1px solid var(--shadow);
       min-height: 18px;
       user-select: none;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 2px var(--shadow);
     }
     /* Plan entries - softer, more tentative look */
     .entry.plan {
-      background: #fefefa;
-      border-left-color: #a8b5a0;
+      background: var(--bg-plan);
+      border-left-color: var(--accent-green-soft);
     }
     /* Actual entries - solid, completed look */
     .entry.actual {
-      background: #fff;
-      border-left-color: #7a9ec2;
+      background: var(--bg-card);
+      border-left-color: var(--accent-blue);
     }
     .entry.dragging {
       cursor: grabbing;
       opacity: 0.85;
       z-index: 100;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+      box-shadow: 0 3px 8px var(--shadow-strong);
     }
     .entry-text {
       outline: none;
@@ -322,7 +386,7 @@
     }
     .entry-text:empty:before {
       content: 'Add text...';
-      color: #aaa;
+      color: var(--text-placeholder);
     }
     .entry-delete {
       position: absolute;
@@ -330,7 +394,7 @@
       right: 2px;
       background: none;
       border: none;
-      color: #bbb;
+      color: var(--text-faint);
       cursor: pointer;
       font-size: 12px;
       padding: 1px 4px;
@@ -340,7 +404,7 @@
       line-height: 1;
     }
     .entry:hover .entry-delete { opacity: 1; }
-    .entry-delete:hover { color: #c9462c; background: rgba(201, 70, 44, 0.1); }
+    .entry-delete:hover { color: var(--accent-red); background: rgba(201, 70, 44, 0.1); }
     .entry-resize {
       position: absolute;
       bottom: 0;
@@ -351,7 +415,7 @@
     }
     .entry-time {
       font-size: 9px;
-      color: #999;
+      color: var(--text-muted);
       margin-bottom: 1px;
     }
     .entry-preview {
@@ -360,16 +424,16 @@
       right: 4px;
       background: rgba(122, 158, 194, 0.3);
       border-radius: 2px;
-      border-left: 2px solid #7a9ec2;
+      border-left: 2px solid var(--accent-blue);
       pointer-events: none;
     }
 
     /* Notes sidebar */
     .notes-panel {
-      background: #f9f6ee;
+      background: var(--bg-notes);
       display: flex;
       flex-direction: column;
-      border-left: 1px solid #e0d9c8;
+      border-left: 1px solid var(--border);
     }
     .notes-header {
       padding: 6px;
@@ -378,8 +442,8 @@
       font-size: 10px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      color: #666;
-      border-bottom: 1px solid #e0d9c8;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
     }
     .notes-content {
       flex: 1;
@@ -392,7 +456,7 @@
     }
     .notes-content:empty:before {
       content: 'Notes...';
-      color: #aaa;
+      color: var(--text-placeholder);
     }
 
     /* Current time indicator */
@@ -401,7 +465,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: #c9462c;
+      background: var(--accent-red);
       z-index: 5;
       pointer-events: none;
     }
@@ -412,7 +476,7 @@
       top: -3px;
       width: 7px;
       height: 7px;
-      background: #c9462c;
+      background: var(--accent-red);
       border-radius: 50%;
     }
   </style>
@@ -1323,7 +1387,7 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.1.0';
+    const APP_VERSION = '1.2.0';
     const APP_UPDATED = '2025-01-13';
 
     function showVersionInfo() {
