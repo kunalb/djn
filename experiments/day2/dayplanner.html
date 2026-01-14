@@ -137,13 +137,21 @@
       background: var(--bg-card);
       border: 1px solid var(--border-button);
       color: var(--text-primary);
-      padding: 4px 10px;
+      width: 28px;
+      height: 28px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 13px;
       font-family: inherit;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .date-nav button:hover { background: var(--bg-hover); border-color: var(--border); }
+    @media (pointer: coarse) {
+      .date-nav button { width: 36px; height: 36px; font-size: 16px; }
+    }
     .current-date {
       font-size: 13px;
       font-weight: 500;
@@ -168,8 +176,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: manipulation;
     }
     .icon-btn:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text-strong); }
+    @media (pointer: coarse) {
+      .icon-btn { width: 36px; height: 36px; font-size: 16px; }
+    }
     .pomodoro-btn {
       background: var(--accent-red);
       border: none;
@@ -180,10 +192,14 @@
       font-size: 11px;
       font-family: inherit;
       font-weight: 500;
+      touch-action: manipulation;
     }
     .pomodoro-btn:hover { background: var(--accent-red-hover); }
     .pomodoro-btn.cancel { background: var(--cancel-btn); }
     .pomodoro-btn.cancel:hover { background: var(--cancel-btn-hover); }
+    @media (pointer: coarse) {
+      .pomodoro-btn { padding: 10px 16px; font-size: 13px; }
+    }
     .pomodoro-timer {
       font-size: 14px;
       font-weight: 600;
@@ -254,6 +270,7 @@
       position: relative;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
     }
     .pomodoro-gutter::-webkit-scrollbar {
       display: none;
@@ -297,36 +314,9 @@
     .pom-marker.completed {
       background: var(--accent-green);
     }
-    .pom-marker-delete {
-      position: absolute;
-      top: -6px;
-      right: -4px;
-      width: 14px;
-      height: 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 50%;
-      font-size: 10px;
-      line-height: 12px;
-      text-align: center;
-      color: var(--text-muted);
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.1s;
-    }
-    .pom-marker:hover .pom-marker-delete { opacity: 1; }
-    .pom-marker-delete:hover { color: var(--accent-red); border-color: var(--accent-red); }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
-    }
-    .pom-preview {
-      position: absolute;
-      left: 3px;
-      right: 3px;
-      background: rgba(201, 70, 44, 0.3);
-      border-radius: 2px;
-      pointer-events: none;
     }
 
     /* Timeline columns */
@@ -334,6 +324,7 @@
       border-right: 1px solid var(--border);
       overflow-y: auto;
       background: var(--bg-timeline);
+      -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
     }
     /* Hide scrollbar on plans column */
     #plansColumn {
@@ -365,6 +356,7 @@
       height: 48px;
       border-bottom: 1px solid var(--border-light);
       position: relative;
+      touch-action: pan-y; /* Allow vertical scroll, prevent horizontal */
     }
     .hour-label {
       position: absolute;
@@ -391,6 +383,13 @@
       min-height: 18px;
       user-select: none;
       box-shadow: 0 1px 2px var(--shadow);
+      touch-action: none; /* Prevent browser touch gestures during drag */
+    }
+    @media (pointer: coarse) {
+      .entry {
+        min-height: 32px;
+        padding: 4px 8px;
+      }
     }
     /* Plan entries - softer, more tentative look */
     .entry.plan {
@@ -427,22 +426,46 @@
       border: none;
       color: var(--text-faint);
       cursor: pointer;
-      font-size: 12px;
-      padding: 1px 4px;
+      font-size: 14px;
+      padding: 4px 8px;
       border-radius: 2px;
       opacity: 0;
       transition: opacity 0.1s;
       line-height: 1;
+      touch-action: manipulation;
     }
     .entry:hover .entry-delete { opacity: 1; }
     .entry-delete:hover { color: var(--accent-red); background: rgba(201, 70, 44, 0.1); }
+    /* Show delete on touch devices */
+    @media (pointer: coarse) {
+      .entry-delete { opacity: 0.6; font-size: 16px; padding: 6px 10px; }
+      .entry-delete:active { opacity: 1; color: var(--accent-red); }
+    }
     .entry-resize {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 5px;
+      height: 12px;
       cursor: ns-resize;
+      /* Visual indicator on hover/touch */
+    }
+    .entry-resize::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .entry:hover .entry-resize::after,
+    .entry:active .entry-resize::after {
+      opacity: 1;
     }
     .entry-time {
       font-size: 9px;
@@ -515,16 +538,16 @@
 <body>
   <div class="header">
     <div class="date-nav">
-      <button onclick="changeDay(-1)">&larr; Prev</button>
+      <button onclick="changeDay(-1)" title="Previous day">&larr;</button>
       <span class="current-date" id="currentDate"></span>
-      <button onclick="changeDay(1)">Next &rarr;</button>
+      <button onclick="changeDay(1)" title="Next day">&rarr;</button>
     </div>
     <div class="pomodoro-controls">
       <button class="icon-btn" onclick="exportAllDays()" title="Export all days">&#8595;</button>
       <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="Import">&#8593;</button>
       <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importFromFile(event)">
       <span class="pomodoro-timer" id="pomodoroTimer"></span>
-      <button class="pomodoro-btn" id="pomodoroBtn" onclick="togglePomodoro()">Start Pomodoro</button>
+      <button class="pomodoro-btn" id="pomodoroBtn" onclick="togglePomodoro()">Pomodoro</button>
       <button class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle theme"></button>
       <button class="icon-btn" onclick="showVersionInfo()" title="About">?</button>
     </div>
@@ -660,14 +683,15 @@
         const heightPx = Math.max(pom.durationMins * PX_PER_MIN, 16);
         el.style.top = topPx + 'px';
         el.style.height = heightPx + 'px';
-        el.title = `${formatTime(pom.hour, pom.minutes)} (${pom.durationMins}min)${pom.completed ? ' - completed' : pom.active ? ' - active' : ''}`;
+        el.title = `${formatTime(pom.hour, pom.minutes)} (${pom.durationMins}min)${pom.completed ? ' - completed' : pom.active ? ' - active' : ''}\nDouble-click to delete`;
 
-        el.innerHTML = `<span class="pom-marker-delete" onclick="deletePomodoro(event, '${pom.id}')">&times;</span>`;
+        // Double-click to delete
+        el.addEventListener('dblclick', () => deletePomodoro(pom.id));
 
         container.appendChild(el);
       });
 
-      setupPomCreateDrag(container);
+      setupPomGutterClick(container);
     }
 
     const PX_PER_MIN = 48 / 60; // 48px per hour
@@ -712,15 +736,42 @@
       // Resize functionality
       const resizeEl = el.querySelector('.entry-resize');
       resizeEl.addEventListener('mousedown', (e) => startResize(e, entry, type));
+      resizeEl.addEventListener('touchstart', (e) => startResize(e, entry, type), { passive: false });
 
       // Drag functionality
-      el.addEventListener('mousedown', (e) => {
+      function handleDragStart(e) {
         // Don't drag if clicking on resize handle, delete button, or editing text
         if (e.target.classList.contains('entry-resize') ||
             e.target.classList.contains('entry-delete') ||
             e.target.classList.contains('entry-text')) return;
         startDrag(e, entry, type, el, container);
-      });
+      }
+      el.addEventListener('mousedown', handleDragStart);
+      el.addEventListener('touchstart', handleDragStart, { passive: false });
+
+      // Long-press to duplicate plan to actual (touch alternative to double-click)
+      if (type === 'plans') {
+        let longPressTimer = null;
+        el.addEventListener('touchstart', (e) => {
+          if (e.target.classList.contains('entry-delete')) return;
+          longPressTimer = setTimeout(() => {
+            duplicateToActual(entry);
+            longPressTimer = null;
+          }, 600); // 600ms long press
+        });
+        el.addEventListener('touchend', () => {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        });
+        el.addEventListener('touchmove', () => {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        });
+      }
 
       container.appendChild(el);
     }
@@ -748,6 +799,14 @@
       });
     }
 
+    // ============ TOUCH HELPERS ============
+    function getEventCoords(e) {
+      if (e.touches && e.touches.length > 0) {
+        return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+      }
+      return { clientX: e.clientX, clientY: e.clientY };
+    }
+
     // ============ ENTRY MANAGEMENT ============
     let createState = null;
     const createDragSetup = new WeakSet(); // Track which containers have listeners
@@ -756,13 +815,14 @@
       if (createDragSetup.has(container)) return; // Already setup
       createDragSetup.add(container);
 
-      container.addEventListener('mousedown', (e) => {
+      function startCreate(e) {
         // Don't create if clicking on an entry
         if (e.target.closest('.entry')) return;
-        if (e.button !== 0) return; // Left click only
+        if (e.type === 'mousedown' && e.button !== 0) return; // Left click only
 
+        const coords = getEventCoords(e);
         const rect = container.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top; // rect already accounts for scroll
+        const relativeY = coords.clientY - rect.top; // rect already accounts for scroll
         const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
 
         // Create preview element
@@ -777,21 +837,33 @@
           container,
           preview,
           startMins,
-          scrollTop: container.parentElement.scrollTop
+          scrollTop: container.parentElement.scrollTop,
+          isTouch: e.type === 'touchstart'
         };
 
-        document.addEventListener('mousemove', doCreateDrag);
-        document.addEventListener('mouseup', endCreateDrag);
-      });
+        if (e.type === 'touchstart') {
+          document.addEventListener('touchmove', doCreateDrag, { passive: false });
+          document.addEventListener('touchend', endCreateDrag);
+          document.addEventListener('touchcancel', endCreateDrag);
+        } else {
+          document.addEventListener('mousemove', doCreateDrag);
+          document.addEventListener('mouseup', endCreateDrag);
+        }
+      }
+
+      container.addEventListener('mousedown', startCreate);
+      container.addEventListener('touchstart', startCreate, { passive: true });
     }
 
     function doCreateDrag(e) {
       if (!createState) return;
+      if (e.cancelable) e.preventDefault(); // Prevent scrolling on touch
 
+      const coords = getEventCoords(e);
       const { container, preview, startMins, scrollTop } = createState;
       const rect = container.getBoundingClientRect();
       const scrollDelta = container.parentElement.scrollTop - scrollTop;
-      const relativeY = e.clientY - rect.top; // rect already accounts for scroll
+      const relativeY = coords.clientY - rect.top; // rect already accounts for scroll
       const currentMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
 
       const minStart = Math.min(startMins, currentMins);
@@ -807,7 +879,7 @@
 
     function endCreateDrag(e) {
       if (createState) {
-        const { type, preview, startMins, currentStart, duration } = createState;
+        const { type, preview, startMins, currentStart, duration, isTouch } = createState;
         preview.remove();
 
         const finalStart = currentStart !== undefined ? currentStart : startMins;
@@ -816,79 +888,42 @@
         const minutes = finalStart % 60;
 
         addEntry(type, hour, minutes, finalDuration);
+
+        // Clean up listeners
+        if (isTouch) {
+          document.removeEventListener('touchmove', doCreateDrag);
+          document.removeEventListener('touchend', endCreateDrag);
+          document.removeEventListener('touchcancel', endCreateDrag);
+        } else {
+          document.removeEventListener('mousemove', doCreateDrag);
+          document.removeEventListener('mouseup', endCreateDrag);
+        }
         createState = null;
       }
-      document.removeEventListener('mousemove', doCreateDrag);
-      document.removeEventListener('mouseup', endCreateDrag);
     }
 
-    // Pomodoro drag-to-create
-    let pomCreateState = null;
-    const pomCreateDragSetup = new WeakSet();
+    // Pomodoro gutter click-to-add
+    const pomGutterSetup = new WeakSet();
 
-    function setupPomCreateDrag(container) {
-      if (pomCreateDragSetup.has(container)) return;
-      pomCreateDragSetup.add(container);
+    function setupPomGutterClick(container) {
+      if (pomGutterSetup.has(container)) return;
+      pomGutterSetup.add(container);
 
-      container.addEventListener('mousedown', (e) => {
+      function handleClick(e) {
         if (e.target.closest('.pom-marker')) return;
-        if (e.button !== 0) return;
 
+        const coords = getEventCoords(e);
         const rect = container.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top;
-        const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+        const relativeY = coords.clientY - rect.top;
+        const clickMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
 
-        const preview = document.createElement('div');
-        preview.className = 'pom-preview';
-        preview.style.top = (startMins * PX_PER_MIN) + 'px';
-        preview.style.height = (25 * PX_PER_MIN) + 'px'; // Default 25 min
-        container.appendChild(preview);
+        const hour = Math.floor(clickMins / 60);
+        const minutes = clickMins % 60;
 
-        pomCreateState = {
-          container,
-          preview,
-          startMins
-        };
-
-        document.addEventListener('mousemove', doPomCreateDrag);
-        document.addEventListener('mouseup', endPomCreateDrag);
-      });
-    }
-
-    function doPomCreateDrag(e) {
-      if (!pomCreateState) return;
-
-      const { container, preview, startMins } = pomCreateState;
-      const rect = container.getBoundingClientRect();
-      const relativeY = e.clientY - rect.top;
-      const currentMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
-
-      const minStart = Math.min(startMins, currentMins);
-      const maxEnd = Math.max(startMins, currentMins);
-      const duration = Math.max(15, maxEnd - minStart + 15);
-
-      preview.style.top = (minStart * PX_PER_MIN) + 'px';
-      preview.style.height = (duration * PX_PER_MIN) + 'px';
-
-      pomCreateState.currentStart = minStart;
-      pomCreateState.duration = duration;
-    }
-
-    function endPomCreateDrag(e) {
-      if (pomCreateState) {
-        const { preview, startMins, currentStart, duration } = pomCreateState;
-        preview.remove();
-
-        const finalStart = currentStart !== undefined ? currentStart : startMins;
-        const finalDuration = duration || 25;
-        const hour = Math.floor(finalStart / 60);
-        const minutes = finalStart % 60;
-
-        addManualPomodoro(hour, minutes, finalDuration);
-        pomCreateState = null;
+        addManualPomodoro(hour, minutes, 25);
       }
-      document.removeEventListener('mousemove', doPomCreateDrag);
-      document.removeEventListener('mouseup', endPomCreateDrag);
+
+      container.addEventListener('click', handleClick);
     }
 
     function addManualPomodoro(hour, minutes, durationMins = 25) {
@@ -935,8 +970,7 @@
       render();
     }
 
-    function deletePomodoro(event, id) {
-      event.stopPropagation();
+    function deletePomodoro(id) {
       const dayData = getDayData();
       dayData.pomodoros = dayData.pomodoros.filter(p => p.id !== id);
       // If deleting active pomodoro, clear it
@@ -977,21 +1011,33 @@
       e.preventDefault();
       e.stopPropagation();
 
+      const coords = getEventCoords(e);
+      const isTouch = e.type === 'touchstart';
+
       resizeState = {
         entry,
         type,
-        startY: e.clientY,
-        startHeight: entry.durationMins
+        startY: coords.clientY,
+        startHeight: entry.durationMins,
+        isTouch
       };
 
-      document.addEventListener('mousemove', doResize);
-      document.addEventListener('mouseup', endResize);
+      if (isTouch) {
+        document.addEventListener('touchmove', doResize, { passive: false });
+        document.addEventListener('touchend', endResize);
+        document.addEventListener('touchcancel', endResize);
+      } else {
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', endResize);
+      }
     }
 
     function doResize(e) {
       if (!resizeState) return;
+      if (e.cancelable) e.preventDefault();
 
-      const deltaY = e.clientY - resizeState.startY;
+      const coords = getEventCoords(e);
+      const deltaY = coords.clientY - resizeState.startY;
       const deltaMins = deltaY / PX_PER_MIN;
       const entryStartMins = resizeState.entry.hour * 60 + resizeState.entry.minutes;
       const maxDuration = 24 * 60 - entryStartMins; // Can't extend past midnight
@@ -1008,10 +1054,18 @@
     function endResize() {
       if (resizeState) {
         saveAllData();
+        const { isTouch } = resizeState;
         resizeState = null;
+
+        if (isTouch) {
+          document.removeEventListener('touchmove', doResize);
+          document.removeEventListener('touchend', endResize);
+          document.removeEventListener('touchcancel', endResize);
+        } else {
+          document.removeEventListener('mousemove', doResize);
+          document.removeEventListener('mouseup', endResize);
+        }
       }
-      document.removeEventListener('mousemove', doResize);
-      document.removeEventListener('mouseup', endResize);
     }
 
     // ============ DRAG ============
@@ -1021,8 +1075,10 @@
       e.preventDefault();
       e.stopPropagation();
 
+      const coords = getEventCoords(e);
       const rect = container.getBoundingClientRect();
       const entryTopMins = entry.hour * 60 + entry.minutes;
+      const isTouch = e.type === 'touchstart';
 
       dragState = {
         entry,
@@ -1030,22 +1086,32 @@
         element,
         container,
         containerRect: rect,
-        startY: e.clientY,
+        startY: coords.clientY,
         startTopMins: entryTopMins,
-        scrollTop: container.parentElement.scrollTop
+        scrollTop: container.parentElement.scrollTop,
+        isTouch
       };
 
       element.classList.add('dragging');
-      document.addEventListener('mousemove', doDrag);
-      document.addEventListener('mouseup', endDrag);
+
+      if (isTouch) {
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('touchend', endDrag);
+        document.addEventListener('touchcancel', endDrag);
+      } else {
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', endDrag);
+      }
     }
 
     function doDrag(e) {
       if (!dragState) return;
+      if (e.cancelable) e.preventDefault();
 
+      const coords = getEventCoords(e);
       const { element, startY, startTopMins, container } = dragState;
       const scrollDelta = container.parentElement.scrollTop - dragState.scrollTop;
-      const deltaY = e.clientY - startY + scrollDelta;
+      const deltaY = coords.clientY - startY + scrollDelta;
       const deltaMins = deltaY / PX_PER_MIN;
       const newTopMins = Math.max(0, Math.min(24 * 60 - 15, startTopMins + deltaMins));
       const snappedMins = Math.round(newTopMins / 15) * 15;
@@ -1063,7 +1129,7 @@
 
     function endDrag() {
       if (dragState) {
-        const { entry, type, element } = dragState;
+        const { entry, type, element, isTouch } = dragState;
         const newTopPx = parseFloat(element.style.top);
         const newTopMins = Math.round(newTopPx / PX_PER_MIN);
         const newHour = Math.floor(newTopMins / 60);
@@ -1081,9 +1147,16 @@
         element.classList.remove('dragging');
         dragState = null;
         render();
+
+        if (isTouch) {
+          document.removeEventListener('touchmove', doDrag);
+          document.removeEventListener('touchend', endDrag);
+          document.removeEventListener('touchcancel', endDrag);
+        } else {
+          document.removeEventListener('mousemove', doDrag);
+          document.removeEventListener('mouseup', endDrag);
+        }
       }
-      document.removeEventListener('mousemove', doDrag);
-      document.removeEventListener('mouseup', endDrag);
     }
 
     // ============ POMODORO ============
@@ -1193,7 +1266,7 @@
         btn.textContent = 'Cancel';
         btn.classList.add('cancel');
       } else {
-        btn.textContent = 'Start Pomodoro';
+        btn.textContent = 'Pomodoro';
         btn.classList.remove('cancel');
       }
     }
@@ -1419,8 +1492,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.2.0';
-    const APP_UPDATED = '2025-01-13';
+    const APP_VERSION = '1.3.0';
+    const APP_UPDATED = '2025-01-14';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;

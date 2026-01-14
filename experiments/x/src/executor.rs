@@ -30,7 +30,7 @@ impl Spinner {
             let mut i = 0;
 
             while running_clone.load(Ordering::Relaxed) {
-                eprint!("\r\x1b[90m┌ {} {}\x1b[0m\x1b[K", model_clone, frames[i]);
+                eprint!("\r┌ {} {} \x1b[K", model_clone, frames[i]);
                 let _ = io::stderr().flush();
                 i = (i + 1) % frames.len();
                 thread::sleep(Duration::from_millis(80));
@@ -53,7 +53,7 @@ impl Spinner {
         }
         // Show completed state
         let duration_str = format_duration(elapsed);
-        eprint!("\r\x1b[90m┌ {} ({})\x1b[0m\x1b[K\n", self.model, duration_str);
+        eprint!("\r┌ {} \x1b[90m({})\x1b[0m\x1b[K\n", self.model, duration_str);
         let _ = io::stderr().flush();
         elapsed
     }
@@ -63,7 +63,7 @@ impl Spinner {
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        eprint!("\r\x1b[90m┌ {} \x1b[31m✗\x1b[0m\x1b[K\n", self.model);
+        eprint!("\r┌ {} \x1b[31m✗\x1b[0m\x1b[K\n", self.model);
         let _ = io::stderr().flush();
     }
 }
@@ -78,12 +78,12 @@ fn format_duration(d: Duration) -> String {
 }
 
 pub fn confirm_command(command: &str) -> ConfirmResult {
-    // Display command in box
-    eprintln!("\x1b[90m│\x1b[0m \x1b[1m{}\x1b[0m", command);
+    // Display command in box (bold)
+    eprintln!("│ \x1b[1m{}\x1b[0m", command);
 
     loop {
         // Prompt on same line with space for cursor
-        eprint!("\x1b[90m└\x1b[0m \x1b[90m[Y/n/e]\x1b[0m ");
+        eprint!("└ \x1b[90m[Y/n/e]\x1b[0m ");
         io::stderr().flush().unwrap();
 
         let mut input = String::new();
@@ -105,7 +105,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
                     return ConfirmResult::Edit(edited);
                 }
                 // Show command again for retry
-                eprintln!("\x1b[90m│\x1b[0m \x1b[1m{}\x1b[0m", command);
+                eprintln!("│ \x1b[1m{}\x1b[0m", command);
             }
             _ => {
                 // Clear line and retry
