@@ -6,8 +6,12 @@ use clap::Parser;
 #[command(version)]
 pub struct Cli {
     /// The natural language request for command generation
-    #[arg(trailing_var_arg = true, required = true)]
+    #[arg(trailing_var_arg = true, required_unless_present = "init")]
     pub request: Vec<String>,
+
+    /// Print shell initialization script (add `eval "$(x --init zsh)"` to .zshrc)
+    #[arg(long, value_name = "SHELL")]
+    pub init: Option<String>,
 
     /// Skip confirmation and run immediately
     #[arg(short = 'y', long)]

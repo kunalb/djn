@@ -12,8 +12,40 @@ use context::Context;
 use executor::{confirm_command, execute_command, print_command, ConfirmResult};
 use llm::{generate_command, Provider};
 
+const ZSH_INIT: &str = r#"x() {
+    local last_exit=$?
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: x <natural language request>" >&2
+        return 1
+    fi
+    command x --last-exit="$last_exit" "$@"
+}"#;
+
+const BASH_INIT: &str = r#"x() {
+    local last_exit=$?
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: x <natural language request>" >&2
+        return 1
+    fi
+    command x --last-exit="$last_exit" "$@"
+}"#;
+
 fn main() {
     let cli = Cli::parse();
+
+    // Handle --init flag (fast path, no config/context needed)
+    if let Some(shell) = &cli.init {
+        match shell.as_str() {
+            "zsh" => println!("{}", ZSH_INIT),
+            "bash" => println!("{}", BASH_INIT),
+            _ => {
+                eprintln!("Unsupported shell: {}. Supported: zsh, bash", shell);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     let config = Config::load();
 
     // Gather context
