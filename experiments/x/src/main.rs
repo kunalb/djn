@@ -18,7 +18,15 @@ const ZSH_INIT: &str = r#"x() {
         echo "Usage: x <natural language request>" >&2
         return 1
     fi
-    command x --last-exit="$last_exit" "$@"
+    local histfile="/tmp/x-hist-$$"
+    command x --last-exit="$last_exit" --hist-file="$histfile" "$@"
+    local ret=$?
+    if [[ -f "$histfile" ]]; then
+        local cmd=$(<"$histfile")
+        [[ -n "$cmd" ]] && print -s "$cmd"
+        rm -f "$histfile"
+    fi
+    return $ret
 }"#;
 
 const BASH_INIT: &str = r#"x() {
@@ -27,7 +35,15 @@ const BASH_INIT: &str = r#"x() {
         echo "Usage: x <natural language request>" >&2
         return 1
     fi
-    command x --last-exit="$last_exit" "$@"
+    local histfile="/tmp/x-hist-$$"
+    command x --last-exit="$last_exit" --hist-file="$histfile" "$@"
+    local ret=$?
+    if [[ -f "$histfile" ]]; then
+        local cmd=$(<"$histfile")
+        [[ -n "$cmd" ]] && history -s "$cmd"
+        rm -f "$histfile"
+    fi
+    return $ret
 }"#;
 
 fn main() {
@@ -145,6 +161,7 @@ fn main() {
         eprintln!("│ \x1b[1m{}\x1b[0m", command);
         eprintln!("└");
         eprintln!();
+        write_hist_file(&cli.hist_file, &command);
         let exit_code = execute_command(&command);
         std::process::exit(exit_code);
     }
@@ -152,15 +169,23 @@ fn main() {
     // Interactive confirmation
     match confirm_command(&command) {
         ConfirmResult::Yes => {
+            write_hist_file(&cli.hist_file, &command);
             let exit_code = execute_command(&command);
             std::process::exit(exit_code);
         }
         ConfirmResult::Edit(edited) => {
+            write_hist_file(&cli.hist_file, &edited);
             let exit_code = execute_command(&edited);
             std::process::exit(exit_code);
         }
         ConfirmResult::No => {
             std::process::exit(0);
         }
+    }
+}
+
+fn write_hist_file(path: &Option<String>, command: &str) {
+    if let Some(p) = path {
+        let _ = std::fs::write(p, command);
     }
 }

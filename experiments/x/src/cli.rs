@@ -50,6 +50,10 @@ pub struct Cli {
     /// Last command exit code (passed from shell wrapper)
     #[arg(long, hide = true)]
     pub last_exit: Option<i32>,
+
+    /// File to write executed command to (for shell history integration)
+    #[arg(long, hide = true)]
+    pub hist_file: Option<String>,
 }
 
 impl Cli {
