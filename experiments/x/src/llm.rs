@@ -195,7 +195,7 @@ fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, Str
     let err_file = format!("/tmp/x-codex-err-{}", std::process::id());
 
     let mut cmd = Command::new(&exe);
-    cmd.args(["exec", "-o", &tmp_file]);
+    cmd.args(["exec", "--skip-git-repo-check", "-o", &tmp_file]);
     if let Some(m) = model {
         cmd.args(["-m", m]);
     }
