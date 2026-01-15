@@ -30,7 +30,7 @@ impl Spinner {
         let handle = thread::spawn(move || {
             while running_clone.load(Ordering::Relaxed) {
                 let elapsed = start_clone.elapsed().as_secs_f64();
-                eprint!("\r- {} {:05.1}s \x1b[K", model_clone, elapsed);
+                eprint!("\r- {} ({:.1}s) \x1b[K", model_clone, elapsed);
                 let _ = io::stderr().flush();
                 thread::sleep(Duration::from_millis(100));
             }
