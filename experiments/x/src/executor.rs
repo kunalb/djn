@@ -11,7 +11,7 @@ pub enum ConfirmResult {
     Edit(String),
 }
 
-/// Spinner that runs in a background thread
+/// Timer that runs in a background thread showing elapsed time
 pub struct Spinner {
     running: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
@@ -24,23 +24,22 @@ impl Spinner {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
         let model_clone = model.to_string();
+        let start = std::time::Instant::now();
+        let start_clone = start;
 
         let handle = thread::spawn(move || {
-            let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-            let mut i = 0;
-
             while running_clone.load(Ordering::Relaxed) {
-                eprint!("\r- {} {} \x1b[K", model_clone, frames[i]);
+                let elapsed = start_clone.elapsed().as_secs_f64();
+                eprint!("\r- {} {:05.1}s \x1b[K", model_clone, elapsed);
                 let _ = io::stderr().flush();
-                i = (i + 1) % frames.len();
-                thread::sleep(Duration::from_millis(80));
+                thread::sleep(Duration::from_millis(100));
             }
         });
 
         Spinner {
             running,
             handle: Some(handle),
-            start: std::time::Instant::now(),
+            start,
             model: model.to_string(),
         }
     }
@@ -51,9 +50,8 @@ impl Spinner {
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        // Clear spinner line, print box header
-        let duration_str = format_duration(elapsed);
-        eprint!("\r\x1b[K┌ {} \x1b[90m({})\x1b[0m\n", self.model, duration_str);
+        // Clear timer line, print box header
+        eprint!("\r\x1b[K┌ {} ({:.1}s)\n", self.model, elapsed.as_secs_f64());
         let _ = io::stderr().flush();
         elapsed
     }
@@ -63,18 +61,9 @@ impl Spinner {
         if let Some(handle) = self.handle {
             let _ = handle.join();
         }
-        // Clear spinner line, show error
+        // Clear timer line, show error
         eprint!("\r\x1b[K\x1b[31merror:\x1b[0m ");
         let _ = io::stderr().flush();
-    }
-}
-
-fn format_duration(d: Duration) -> String {
-    let ms = d.as_millis();
-    if ms < 1000 {
-        format!("{}ms", ms)
-    } else {
-        format!("{:.1}s", d.as_secs_f64())
     }
 }
 
@@ -84,7 +73,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
 
     loop {
         // Prompt on same line with space for cursor
-        eprint!("└ \x1b[90m[Y/n/e]\x1b[0m ");
+        eprint!("└ [Y/n/e] ");
         io::stderr().flush().unwrap();
 
         let mut input = String::new();
@@ -119,7 +108,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
 fn edit_command(_command: &str) -> Option<String> {
     // Clear prompt line
     eprint!("\x1b[1A\x1b[K");
-    eprint!("\x1b[90m└\x1b[0m ");
+    eprint!("└ ");
     io::stderr().flush().unwrap();
 
     let mut input = String::new();
@@ -145,7 +134,7 @@ pub fn execute_command(command: &str) -> i32 {
         Ok(s) => {
             let code = s.code().unwrap_or(1);
             if code != 0 {
-                eprintln!("\x1b[90mexit {}\x1b[0m", code);
+                eprintln!("exit {}", code);
             }
             code
         }
