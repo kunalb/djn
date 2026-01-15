@@ -78,12 +78,15 @@ impl Provider {
     }
 }
 
-pub const SYSTEM_PROMPT: &str = r#"You are a shell command generator. Given the user's request and context, output ONLY the shell command(s) to execute.
+pub const SYSTEM_PROMPT: &str = r#"You are a shell command generator. Given the user's request and context, generate a shell command to execute.
+
+Output the command wrapped in <cmd> tags like this:
+<cmd>your command here</cmd>
 
 Rules:
-- Output ONLY the command, nothing else
-- No explanations, no markdown, no code blocks
-- For multiple commands, separate with && or use appropriate shell constructs
+- Put the final command inside <cmd>...</cmd> tags
+- For multiple commands, use && or ; inside the tags
+- You may explain your reasoning before the tags if helpful
 - Use the context to understand what the user wants
 - If the request references "previous command" or "last command", use the history context
 - If fixing an error, look at the terminal content for error messages"#;
@@ -229,6 +232,16 @@ fn run_command(mut cmd: Command, name: &str) -> Result<String, String> {
 
 fn clean_command_output(output: &str) -> String {
     let trimmed = output.trim();
+
+    // Extract from <cmd>...</cmd> tags (preferred format)
+    if let Some(start) = trimmed.find("<cmd>") {
+        if let Some(end) = trimmed.find("</cmd>") {
+            let cmd_start = start + 5; // len("<cmd>")
+            if cmd_start < end {
+                return trimmed[cmd_start..end].trim().to_string();
+            }
+        }
+    }
 
     // Remove markdown code blocks
     if trimmed.starts_with("```") {
