@@ -123,7 +123,7 @@ pub fn generate_command(
 
 fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, String> {
     let exe = Provider::Claude.find_executable()
-        .ok_or_else(|| "claude CLI not found".to_string())?;
+        .ok_or_else(|| "claude CLI not found. Install from: https://claude.ai/code".to_string())?;
 
     // Map short names to full model names
     let model_arg = model.map(|m| match m {
@@ -139,14 +139,14 @@ fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, Str
         cmd.args(["--model", m]);
     }
 
-    run_command(cmd, "claude")
+    run_command_with_stderr(cmd, "claude")
 }
 
 fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, String> {
     use std::io::Write;
 
     let exe = Provider::Gemini.find_executable()
-        .ok_or_else(|| "gemini CLI not found".to_string())?;
+        .ok_or_else(|| "gemini CLI not found. Install from: https://github.com/anthropics/gemini-cli".to_string())?;
 
     let mut cmd = Command::new(&exe);
     if let Some(m) = model {
@@ -156,7 +156,7 @@ fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, Str
     let mut child = cmd
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
         .spawn()
         .map_err(|e| format!("Failed to run gemini: {}", e))?;
 
@@ -168,19 +168,31 @@ fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, Str
         .map_err(|e| format!("Failed to wait for gemini: {}", e))?;
 
     if !output.status.success() {
-        return Err("gemini failed".to_string());
+        let code = output.status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stderr.is_empty() {
+            "no error output".to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!("gemini exited with code {}: {}", code, detail));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if stdout.is_empty() {
+        return Err("gemini returned empty output".to_string());
+    }
+
     Ok(clean_command_output(&stdout))
 }
 
 fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, String> {
     let exe = Provider::OpenAI.find_executable()
-        .ok_or_else(|| "codex CLI not found".to_string())?;
+        .ok_or_else(|| "codex CLI not found. Install from: https://github.com/openai/codex".to_string())?;
 
     // Use temp file for output (codex duplicates when using /dev/stdout)
     let tmp_file = format!("/tmp/x-codex-{}", std::process::id());
+    let err_file = format!("/tmp/x-codex-err-{}", std::process::id());
 
     let mut cmd = Command::new(&exe);
     cmd.args(["exec", "-o", &tmp_file]);
@@ -189,8 +201,11 @@ fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, Str
     }
     cmd.arg(prompt);
 
-    // Codex writes UI to stderr, suppress it
-    cmd.stderr(std::process::Stdio::null());
+    // Capture stderr for error messages
+    let err_fd = std::fs::File::create(&err_file).ok();
+    if let Some(f) = err_fd {
+        cmd.stderr(f);
+    }
     cmd.stdout(std::process::Stdio::null());
 
     let status = cmd
@@ -198,36 +213,51 @@ fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, Str
         .status()
         .map_err(|e| format!("Failed to run codex: {}", e))?;
 
-    let output = std::fs::read_to_string(&tmp_file)
-        .unwrap_or_default();
+    let output = std::fs::read_to_string(&tmp_file).unwrap_or_default();
+    let stderr = std::fs::read_to_string(&err_file).unwrap_or_default();
     let _ = std::fs::remove_file(&tmp_file);
+    let _ = std::fs::remove_file(&err_file);
 
     if !status.success() {
-        return Err("codex failed".to_string());
+        let code = status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
+        let detail = if stderr.is_empty() {
+            "no error output".to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!("codex exited with code {}: {}", code, detail));
+    }
+
+    if output.is_empty() {
+        return Err("codex returned empty output".to_string());
     }
 
     Ok(clean_command_output(&output))
 }
 
-fn run_command(mut cmd: Command, name: &str) -> Result<String, String> {
+fn run_command_with_stderr(mut cmd: Command, name: &str) -> Result<String, String> {
     let output = cmd
         .stdin(std::process::Stdio::null())
         .output()
         .map_err(|e| format!("Failed to run {}: {}", name, e))?;
 
     if !output.status.success() {
+        let code = output.status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("{} failed: {}", name, stderr));
+        let detail = if stderr.is_empty() {
+            "no error output".to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!("{} exited with code {}: {}", name, code, detail));
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .to_string();
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if stdout.is_empty() {
+        return Err(format!("{} returned empty output", name));
+    }
 
-    // Clean up the output - remove markdown code blocks if present
-    let cleaned = clean_command_output(&stdout);
-
-    Ok(cleaned)
+    Ok(clean_command_output(&stdout))
 }
 
 fn clean_command_output(output: &str) -> String {
