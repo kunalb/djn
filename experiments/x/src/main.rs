@@ -10,7 +10,7 @@ use cli::Cli;
 use config::Config;
 use context::Context;
 use executor::{confirm_command, execute_command, print_command, ConfirmResult, Spinner};
-use llm::{generate_command, Provider};
+use llm::{build_prompt, generate_command, Provider};
 
 const ZSH_INIT: &str = r#"x() {
     local last_exit=$?
@@ -60,16 +60,19 @@ fn main() {
     // Gather context
     let context = Context::gather(cli.last_exit);
 
-    // Debug: show context
+    // Debug: show context and prompt
     if cli.context {
-        eprintln!("\x1b[1;33m=== Captured Context ===\x1b[0m");
-        eprintln!("{}", context.format_for_prompt());
-        eprintln!("\x1b[1;33m========================\x1b[0m");
-        // Exit if no request provided (just introspection)
         if cli.request.is_empty() {
-            return;
+            // Just show context (full, not truncated)
+            eprintln!("\x1b[1m=== Context ===\x1b[0m\n");
+            eprintln!("{}", context.format_for_display());
+        } else {
+            // Show full prompt that would be sent
+            let request = cli.request_string();
+            eprintln!("\x1b[1m=== Prompt ===\x1b[0m\n");
+            eprintln!("{}", build_prompt(&request, &context));
         }
-        eprintln!();
+        return;
     }
 
     // Determine provider

@@ -78,7 +78,7 @@ impl Provider {
     }
 }
 
-const SYSTEM_PROMPT: &str = r#"You are a shell command generator. Given the user's request and context, output ONLY the shell command(s) to execute.
+pub const SYSTEM_PROMPT: &str = r#"You are a shell command generator. Given the user's request and context, output ONLY the shell command(s) to execute.
 
 Rules:
 - Output ONLY the command, nothing else
@@ -87,6 +87,16 @@ Rules:
 - Use the context to understand what the user wants
 - If the request references "previous command" or "last command", use the history context
 - If fixing an error, look at the terminal content for error messages"#;
+
+/// Build the full prompt that would be sent to the model
+pub fn build_prompt(request: &str, context: &Context) -> String {
+    format!(
+        "{}\n\nContext:\n{}\n\nUser request: {}",
+        SYSTEM_PROMPT,
+        context.format_for_prompt(),
+        request
+    )
+}
 
 pub fn generate_command(
     provider: Provider,

@@ -109,6 +109,14 @@ impl Context {
     }
 
     pub fn format_for_prompt(&self) -> String {
+        self.format_internal(true)
+    }
+
+    pub fn format_for_display(&self) -> String {
+        self.format_internal(false)
+    }
+
+    fn format_internal(&self, truncate: bool) -> String {
         let mut parts = Vec::new();
 
         parts.push(format!("Working directory: {}", self.cwd));
@@ -126,9 +134,8 @@ impl Context {
         }
 
         if let Some(tmux) = &self.tmux_content {
-            // Truncate if too long
-            // Truncate at char boundary, not byte boundary
-            let truncated = if tmux.len() > 2000 {
+            let content = if truncate && tmux.len() > 2000 {
+                // Truncate at char boundary, not byte boundary
                 let mut end = 2000;
                 while !tmux.is_char_boundary(end) && end > 0 {
                     end -= 1;
@@ -137,7 +144,7 @@ impl Context {
             } else {
                 tmux.clone()
             };
-            parts.push(format!("Terminal content:\n{}", truncated));
+            parts.push(format!("Terminal content:\n{}", content));
         }
 
         parts.join("\n\n")
