@@ -13,8 +13,29 @@ const VERSION: &str = concat!(
 #[derive(Parser, Debug)]
 #[command(name = "x")]
 #[command(about = "Fast terminal LLM command generator")]
-#[command(after_help = "Built with Claude")]
 #[command(version = VERSION)]
+#[command(after_help = r#"Examples:
+  x list files sorted by size
+  x find large files in this directory
+  x -y show disk usage          # skip confirmation
+  x -p claude write a bash script
+  cat data.json | x extract user ids
+
+Interactive prompt:
+  When a command is generated, you'll see: [Y/n/e/...]
+    y or Enter  Run the command
+    n           Cancel
+    e           Edit the command manually
+    ...         Type anything else to refine with natural language
+
+  Example refinement:
+    $ x list files
+    │ ls
+    └ [Y/n/e/...] sort by size, largest first
+    │ ls -lhS
+    └ [Y/n/e/...] y
+
+Built with Claude"#)]
 pub struct Cli {
     /// The natural language request for command generation
     #[arg(trailing_var_arg = true, required_unless_present_any = ["init", "context", "config"])]

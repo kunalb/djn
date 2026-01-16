@@ -85,7 +85,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
 
     loop {
         // Prompt on same line with space for cursor
-        eprint!("└ [Y/n/e] ");
+        eprint!("└ [Y/n/e/...] ");
         io::stderr().flush().unwrap();
 
         let mut input = String::new();

@@ -6,7 +6,7 @@ A fast, minimal terminal utility that uses LLMs to generate shell commands from 
 $ x create a new directory called projects and initialize a git repo in it
 ┌ gemini (1.2s)
 │ mkdir projects && cd projects && git init
-└ [Y/n/e] y
+└ [Y/n/e/...] y
 
 Initialized empty Git repository in /home/user/projects/.git/
 ```
@@ -125,13 +125,13 @@ When a command is generated, you'll see:
 ```
 ┌ gemini (1.2s)
 │ ls -la
-└ [Y/n/e]
+└ [Y/n/e/...]
 ```
 
 - **y** or **Enter** - Run the command
 - **n** - Cancel
 - **e** - Edit the command manually
-- **anything else** - Refine with natural language feedback
+- **...** (anything else) - Refine with natural language feedback
 
 ### Refinement Example
 
@@ -139,10 +139,10 @@ When a command is generated, you'll see:
 $ x list files
 ┌ gemini (0.8s)
 │ ls
-└ [Y/n/e] sort by size, largest first
+└ [Y/n/e/...] sort by size, largest first
 ┌ gemini (0.6s)
 │ ls -lhS
-└ [Y/n/e] y
+└ [Y/n/e/...] y
 
 total 52K
 -rw-r--r-- 1 user user 12K Jan 15 10:00 main.rs

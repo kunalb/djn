@@ -104,10 +104,10 @@ The confirmation prompt accepts natural language refinements:
 ```
 ┌ gemini (1.2s)
 │ ls
-└ [Y/n/e] sort by size
+└ [Y/n/e/...] sort by size
 ┌ gemini (0.8s)
 │ ls -lhS
-└ [Y/n/e] y
+└ [Y/n/e/...] y
 ```
 
 Non-y/n/e input triggers regeneration with the feedback and previous command as context.
@@ -156,7 +156,7 @@ Each provider has specific handling:
 - gemini (0.5s)     # While generating
 ┌ gemini (1.2s)     # When complete
 │ ls -la            # Command (bold)
-└ [Y/n/e]           # Prompt
+└ [Y/n/e/...]           # Prompt
 ```
 
 - Live timer updates every 100ms
