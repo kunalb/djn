@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::io::IsTerminal;
 use std::path::Path;
 use std::process::Command;
 
@@ -11,6 +12,7 @@ pub struct Context {
     pub history: Vec<String>,
     pub last_exit: Option<i32>,
     pub tmux_content: Option<String>,
+    pub stdin_is_pipe: bool,
 }
 
 impl Context {
@@ -22,6 +24,7 @@ impl Context {
         let (git_branch, git_repo) = Self::get_git_info();
         let history = Self::get_shell_history(5);
         let tmux_content = Self::get_tmux_content();
+        let stdin_is_pipe = !std::io::stdin().is_terminal();
 
         Context {
             cwd,
@@ -30,6 +33,7 @@ impl Context {
             history,
             last_exit,
             tmux_content,
+            stdin_is_pipe,
         }
     }
 
@@ -131,6 +135,10 @@ impl Context {
 
         if let Some(exit) = self.last_exit {
             parts.push(format!("Last command exit code: {}", exit));
+        }
+
+        if self.stdin_is_pipe {
+            parts.push("Stdin: Data is being piped in - generate a command that reads from stdin".to_string());
         }
 
         if let Some(tmux) = &self.tmux_content {
