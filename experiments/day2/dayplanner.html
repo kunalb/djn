@@ -622,6 +622,14 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
     }
 
+    // Sync data when another tab makes changes
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) {
+        state.data = loadAllData();
+        render();
+      }
+    });
+
     function getDayData(dateStr = state.currentDate) {
       if (!state.data[dateStr]) {
         state.data[dateStr] = {
@@ -1493,8 +1501,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.3.0';
-    const APP_UPDATED = '2025-01-14';
+    const APP_VERSION = '1.4.0';
+    const APP_UPDATED = '2025-01-16';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;
