@@ -207,7 +207,7 @@ $ x fix it
 
 ## Credits
 
-Built with [Claude](https://claude.ai) by Anthropic.
+Built with Claude.
 
 ## License
 

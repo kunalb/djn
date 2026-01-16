@@ -263,12 +263,13 @@ fn run_command_with_stderr(mut cmd: Command, name: &str) -> Result<String, Strin
 fn clean_command_output(output: &str) -> String {
     let trimmed = output.trim();
 
-    // Extract from <cmd>...</cmd> tags (preferred format)
-    if let Some(start) = trimmed.find("<cmd>") {
-        if let Some(end) = trimmed.find("</cmd>") {
+    // Extract from <cmd>...</cmd> tags (use LAST one for agentic CLIs that iterate)
+    if let Some(start) = trimmed.rfind("<cmd>") {
+        if let Some(end) = trimmed[start..].find("</cmd>") {
             let cmd_start = start + 5; // len("<cmd>")
-            if cmd_start < end {
-                return trimmed[cmd_start..end].trim().to_string();
+            let cmd_end = start + end;
+            if cmd_start < cmd_end {
+                return trimmed[cmd_start..cmd_end].trim().to_string();
             }
         }
     }
