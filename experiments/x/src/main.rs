@@ -119,67 +119,82 @@ fn main() {
     let model_str: Option<String> = cli.model.clone().or_else(|| config.get_model(provider_name));
     let model_ref = model_str.as_deref();
 
-    // Generate command
-    let request = cli.request_string();
-
     // Build spinner message with provider/model info
     let model_display = model_ref
         .map(|m| format!("{}/{}", provider.display_name(), m))
         .unwrap_or_else(|| provider.display_name().to_string());
 
-    // Show spinner while generating (unless dry-run for cleaner output)
-    let spinner = if cli.dry_run {
-        None
-    } else {
-        Some(Spinner::new(&model_display))
-    };
+    // Generate command with optional refinement loop
+    let mut request = cli.request_string();
+    let mut prev_command: Option<String> = None;
 
-    let command = match generate_command(provider, model_ref, &request, &context) {
-        Ok(cmd) => {
-            if let Some(s) = spinner {
-                let _ = s.stop();
+    loop {
+        // Build the full request including refinement context
+        let full_request = if let Some(ref prev) = prev_command {
+            format!("{}\n\nPrevious command: {}", request, prev)
+        } else {
+            request.clone()
+        };
+
+        // Show spinner while generating (unless dry-run for cleaner output)
+        let spinner = if cli.dry_run {
+            None
+        } else {
+            Some(Spinner::new(&model_display))
+        };
+
+        let command = match generate_command(provider, model_ref, &full_request, &context) {
+            Ok(cmd) => {
+                if let Some(s) = spinner {
+                    let _ = s.stop();
+                }
+                cmd
             }
-            cmd
-        }
-        Err(e) => {
-            if let Some(s) = spinner {
-                s.stop_error();
+            Err(e) => {
+                if let Some(s) = spinner {
+                    s.stop_error();
+                }
+                eprintln!("\x1b[1;31merror:\x1b[0m {}", e);
+                std::process::exit(1);
             }
-            eprintln!("\x1b[1;31merror:\x1b[0m {}", e);
-            std::process::exit(1);
+        };
+
+        // Handle output based on mode
+        if cli.dry_run {
+            print_command(&command);
+            return;
         }
-    };
 
-    // Handle output based on mode
-    if cli.dry_run {
-        print_command(&command);
-        return;
-    }
-
-    if cli.yes {
-        // Auto-run mode - show command and run
-        eprintln!("│ \x1b[1m{}\x1b[0m", command);
-        eprintln!("└");
-        eprintln!();
-        write_hist_file(&cli.hist_file, &command);
-        let exit_code = execute_command(&command);
-        std::process::exit(exit_code);
-    }
-
-    // Interactive confirmation
-    match confirm_command(&command) {
-        ConfirmResult::Yes => {
+        if cli.yes {
+            // Auto-run mode - show command and run
+            eprintln!("│ \x1b[1m{}\x1b[0m", command);
+            eprintln!("└");
+            eprintln!();
             write_hist_file(&cli.hist_file, &command);
             let exit_code = execute_command(&command);
             std::process::exit(exit_code);
         }
-        ConfirmResult::Edit(edited) => {
-            write_hist_file(&cli.hist_file, &edited);
-            let exit_code = execute_command(&edited);
-            std::process::exit(exit_code);
-        }
-        ConfirmResult::No => {
-            std::process::exit(0);
+
+        // Interactive confirmation
+        match confirm_command(&command) {
+            ConfirmResult::Yes => {
+                write_hist_file(&cli.hist_file, &command);
+                let exit_code = execute_command(&command);
+                std::process::exit(exit_code);
+            }
+            ConfirmResult::Edit(edited) => {
+                write_hist_file(&cli.hist_file, &edited);
+                let exit_code = execute_command(&edited);
+                std::process::exit(exit_code);
+            }
+            ConfirmResult::No => {
+                std::process::exit(0);
+            }
+            ConfirmResult::Refine(instructions) => {
+                // Update request with refinement and loop
+                prev_command = Some(command);
+                request = instructions;
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ pub enum ConfirmResult {
     Yes,
     No,
     Edit(String),
+    Refine(String),
 }
 
 /// Timer that runs in a background thread showing elapsed time
@@ -81,7 +82,8 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
             return ConfirmResult::No;
         }
 
-        match input.trim().to_lowercase().as_str() {
+        let trimmed = input.trim();
+        match trimmed.to_lowercase().as_str() {
             "y" | "yes" | "" => {
                 eprintln!(); // blank line before output
                 return ConfirmResult::Yes;
@@ -98,8 +100,8 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
                 eprintln!("│ \x1b[1m{}\x1b[0m", command);
             }
             _ => {
-                // Clear line and retry
-                eprint!("\x1b[1A\x1b[K");
+                // Treat as refinement instructions
+                return ConfirmResult::Refine(trimmed.to_string());
             }
         }
     }
