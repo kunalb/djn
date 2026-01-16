@@ -94,8 +94,9 @@ default_provider = "gemini"
 # model = "haiku"               # alias for latest haiku (fast)
 
 [openai]
-# model = "gpt-4o"              # general purpose (default)
-# model = "o3"                  # reasoning model
+# model = "gpt-5-codex"         # default
+# model = "gpt-5.2-codex"       # latest, most advanced
+# model = "gpt-5-codex-mini"    # faster
 ```
 
 ## Usage
