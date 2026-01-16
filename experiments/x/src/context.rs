@@ -16,14 +16,18 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn gather(last_exit: Option<i32>) -> Self {
+    pub fn gather(last_exit: Option<i32>, include_tmux: bool) -> Self {
         let cwd = env::current_dir()
             .map(|p| p.display().to_string())
             .unwrap_or_else(|_| ".".to_string());
 
         let (git_branch, git_repo) = Self::get_git_info();
         let history = Self::get_shell_history(5);
-        let tmux_content = Self::get_tmux_content();
+        let tmux_content = if include_tmux {
+            Self::get_tmux_content()
+        } else {
+            None
+        };
         let stdin_is_pipe = !std::io::stdin().is_terminal();
 
         Context {

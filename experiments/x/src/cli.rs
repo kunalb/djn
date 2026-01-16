@@ -48,6 +48,10 @@ pub struct Cli {
     #[arg(long)]
     pub context: bool,
 
+    /// Include tmux terminal content in context
+    #[arg(short = 't', long)]
+    pub tmux: bool,
+
     /// Last command exit code (passed from shell wrapper)
     #[arg(long, hide = true)]
     pub last_exit: Option<i32>,

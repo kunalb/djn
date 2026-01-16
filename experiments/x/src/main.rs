@@ -74,7 +74,7 @@ fn main() {
     let config = Config::load();
 
     // Gather context
-    let context = Context::gather(cli.last_exit);
+    let context = Context::gather(cli.last_exit, cli.tmux);
 
     // Debug: show context and prompt
     if cli.context {
