@@ -1,3 +1,0 @@
-cargo:rustc-env=BUILD_GIT_HASH=6d275b7
-cargo:rustc-env=BUILD_TIMESTAMP=20260115
-cargo:rerun-if-changed=.git/HEAD
