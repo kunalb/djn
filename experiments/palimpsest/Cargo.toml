@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "palimpsest"
+version = "0.1.0"
+edition = "2021"
+description = "TUI for exploring git history of individual files"
+
+[dependencies]
+git2 = "0.19"
+ratatui = "0.29"
+crossterm = "0.28"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+chrono = "0.4"
+similar = "2"
+syntect = "5"
