@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Write};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -72,13 +73,23 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
     // Display command in box (bold)
     eprintln!("│ \x1b[1m{}\x1b[0m", command);
 
+    // Read from /dev/tty for user input, so stdin can flow to the command
+    let tty = match File::open("/dev/tty") {
+        Ok(f) => f,
+        Err(_) => {
+            // No TTY available, auto-reject
+            return ConfirmResult::No;
+        }
+    };
+    let mut tty_reader = BufReader::new(tty);
+
     loop {
         // Prompt on same line with space for cursor
         eprint!("└ [Y/n/e] ");
         io::stderr().flush().unwrap();
 
         let mut input = String::new();
-        if io::stdin().read_line(&mut input).is_err() {
+        if tty_reader.read_line(&mut input).is_err() {
             return ConfirmResult::No;
         }
 
@@ -92,7 +103,7 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
                 return ConfirmResult::No;
             }
             "e" | "edit" => {
-                if let Some(edited) = edit_command(command) {
+                if let Some(edited) = edit_command_tty(&mut tty_reader) {
                     eprintln!(); // blank line before output
                     return ConfirmResult::Edit(edited);
                 }
@@ -107,14 +118,14 @@ pub fn confirm_command(command: &str) -> ConfirmResult {
     }
 }
 
-fn edit_command(_command: &str) -> Option<String> {
+fn edit_command_tty(tty_reader: &mut BufReader<File>) -> Option<String> {
     // Clear prompt line
     eprint!("\x1b[1A\x1b[K");
     eprint!("└ ");
     io::stderr().flush().unwrap();
 
     let mut input = String::new();
-    if io::stdin().read_line(&mut input).is_err() {
+    if tty_reader.read_line(&mut input).is_err() {
         return None;
     }
 

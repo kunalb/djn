@@ -142,7 +142,7 @@ impl Context {
         }
 
         if self.stdin_is_pipe {
-            parts.push("Stdin: Data is being piped in - generate a command that reads from stdin".to_string());
+            parts.push("PIPED INPUT: Data is being piped into this command via stdin. Generate a command that reads from stdin (the piped data will be passed to your command automatically).".to_string());
         }
 
         if let Some(tmux) = &self.tmux_content {
