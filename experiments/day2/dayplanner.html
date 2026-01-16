@@ -1079,6 +1079,17 @@
     // ============ DRAG ============
     let dragState = null;
 
+    function getColumnAtX(x) {
+      const plansCol = document.getElementById('plansColumn');
+      const actualsCol = document.getElementById('actualsColumn');
+      const plansRect = plansCol.getBoundingClientRect();
+      const actualsRect = actualsCol.getBoundingClientRect();
+
+      if (x >= plansRect.left && x <= plansRect.right) return 'plans';
+      if (x >= actualsRect.left && x <= actualsRect.right) return 'actuals';
+      return null;
+    }
+
     function startDrag(e, entry, type, element, container) {
       e.preventDefault();
       e.stopPropagation();
@@ -1091,6 +1102,7 @@
       dragState = {
         entry,
         type,
+        targetType: type, // Track which column we're over
         element,
         container,
         containerRect: rect,
@@ -1133,25 +1145,48 @@
       const endTimeStr = formatTime(Math.floor(endMin / 60) % 24, endMin % 60);
       const timeEl = element.querySelector('.entry-time');
       timeEl.textContent = `${formatTime(newHour, newMinutes)} - ${endTimeStr}`;
+
+      // Check if dragged to other column
+      const colAtCursor = getColumnAtX(coords.clientX);
+      if (colAtCursor && colAtCursor !== dragState.targetType) {
+        dragState.targetType = colAtCursor;
+        // Update visual to show target column style
+        element.classList.remove('plan', 'actual');
+        element.classList.add(colAtCursor === 'plans' ? 'plan' : 'actual');
+      }
     }
 
     function endDrag() {
       if (dragState) {
-        const { entry, type, element, isTouch } = dragState;
+        const { entry, type, targetType, element, isTouch } = dragState;
         const newTopPx = parseFloat(element.style.top);
         const newTopMins = Math.round(newTopPx / PX_PER_MIN);
         const newHour = Math.floor(newTopMins / 60);
         const newMinutes = newTopMins % 60;
 
-        // Update the entry in data
         const dayData = getDayData();
-        const dataEntry = dayData[type].find(e => e.id === entry.id);
-        if (dataEntry) {
-          dataEntry.hour = newHour;
-          dataEntry.minutes = newMinutes;
-          saveAllData();
+
+        if (targetType !== type) {
+          // Moving to different column
+          dayData[type] = dayData[type].filter(e => e.id !== entry.id);
+          const newEntry = {
+            id: targetType.charAt(0) + '_' + Date.now(),
+            hour: newHour,
+            minutes: newMinutes,
+            durationMins: entry.durationMins,
+            text: entry.text
+          };
+          dayData[targetType].push(newEntry);
+        } else {
+          // Same column - just update position
+          const dataEntry = dayData[type].find(e => e.id === entry.id);
+          if (dataEntry) {
+            dataEntry.hour = newHour;
+            dataEntry.minutes = newMinutes;
+          }
         }
 
+        saveAllData();
         element.classList.remove('dragging');
         dragState = null;
         render();
@@ -1501,7 +1536,7 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.4.0';
+    const APP_VERSION = '1.5.0';
     const APP_UPDATED = '2025-01-16';
 
     function showVersionInfo() {
