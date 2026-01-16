@@ -113,6 +113,7 @@ x [OPTIONS] <REQUEST>...
 | `-n, --dry-run` | Print command without running |
 | `-p, --provider <NAME>` | Use specific provider (claude/gemini/codex) |
 | `-m, --model <MODEL>` | Use specific model |
+| `-t, --tmux` | Include tmux terminal content in context |
 | `--context` | Show captured context (debug) |
 | `--config` | Open config file in $EDITOR |
 | `--init <SHELL>` | Print shell integration script |
@@ -156,7 +157,8 @@ total 52K
 - **Git info** - repo name and branch
 - **Shell history** - last 5 commands
 - **Exit code** - whether the last command failed
-- **Tmux content** - visible terminal content (if in tmux)
+- **Piped input** - detects when data is piped via stdin
+- **Tmux content** - visible terminal content (opt-in with `-t` flag)
 
 Use `x --context` to see what context is captured:
 
@@ -203,6 +205,24 @@ main.c:10: error: expected ';' before '}'
 $ x fix it
 ┌ gemini (0.9s)
 │ gcc main.c -fsyntax-only  # or suggests the actual fix
+```
+
+### Include terminal context with -t
+
+When in tmux, use `-t` to capture visible terminal content:
+
+```bash
+$ x -t what does this error mean and how do I fix it
+```
+
+### Process piped data
+
+When piping data to `x`, it detects stdin and generates commands that read from it:
+
+```bash
+$ cat data.json | x extract the user ids
+┌ gemini (0.8s)
+│ jq '.users[].id'
 ```
 
 ## Credits

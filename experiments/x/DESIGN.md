@@ -67,7 +67,9 @@ I'll list files sorted by size.
 <cmd>ls -lhS</cmd>
 ```
 
-The parser extracts content from these tags, with fallbacks for:
+The parser extracts the **last** `<cmd>` tag from the output. This handles agentic CLIs (like Claude Code) that may iterate and produce multiple command suggestions before settling on a final one.
+
+Fallbacks for models that don't use tags:
 - Markdown code blocks (```bash ... ```)
 - Inline backticks (`command`)
 - Raw output (last resort)
@@ -82,9 +84,10 @@ To generate relevant commands, `x` captures:
 | Git branch/repo | `git` commands | Repo-aware suggestions |
 | Shell history | `~/.zsh_history` | "fix last command" |
 | Exit code | Shell wrapper | Error context |
-| Tmux content | `tmux capture-pane` | Visible errors/output |
+| Piped stdin | `stdin.is_terminal()` | Generate stdin-reading commands |
+| Tmux content | `tmux capture-pane` | Visible errors/output (opt-in) |
 
-Tmux content is truncated to 2000 chars for the prompt (full content shown with `--context`).
+Tmux capture is opt-in via `-t/--tmux` flag to avoid capturing sensitive terminal content by default. Content is truncated to 2000 chars for the prompt (full content shown with `--context`).
 
 ### 5. User's Shell for Execution
 
@@ -119,7 +122,7 @@ experiments/x/
 │   ├── main.rs         # Entry point and orchestration
 │   ├── cli.rs          # Clap argument definitions
 │   ├── config.rs       # TOML config loading
-│   ├── context.rs      # Shell/git/tmux context capture
+│   ├── context.rs      # Shell/git/tmux/stdin context capture
 │   ├── executor.rs     # Timer, confirmation UI, execution
 │   └── llm.rs          # Provider abstraction and CLI spawning
 └── tests/
@@ -139,6 +142,7 @@ Each provider has specific handling:
 - CLI: `gemini [-m <model>]` with prompt on stdin
 - Stdin piping required for non-interactive mode
 - Captures both stdout and stderr for errors
+- Tool execution disabled via custom settings (`~/.config/x/gemini/settings.json`) to prevent the CLI from executing commands directly
 
 ### Codex (OpenAI)
 - CLI: `codex exec --skip-git-repo-check -o <file> <prompt>`
