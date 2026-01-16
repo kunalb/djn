@@ -170,7 +170,7 @@ fn main() {
             eprintln!("│ \x1b[1m{}\x1b[0m", command);
             eprintln!("└");
             eprintln!();
-            write_hist_file(&cli.hist_file, &command);
+            write_hist_file(&cli.hist_file, &command, context.stdin_is_pipe);
             let exit_code = execute_command(&command);
             std::process::exit(exit_code);
         }
@@ -178,12 +178,12 @@ fn main() {
         // Interactive confirmation
         match confirm_command(&command) {
             ConfirmResult::Yes => {
-                write_hist_file(&cli.hist_file, &command);
+                write_hist_file(&cli.hist_file, &command, context.stdin_is_pipe);
                 let exit_code = execute_command(&command);
                 std::process::exit(exit_code);
             }
             ConfirmResult::Edit(edited) => {
-                write_hist_file(&cli.hist_file, &edited);
+                write_hist_file(&cli.hist_file, &edited, context.stdin_is_pipe);
                 let exit_code = execute_command(&edited);
                 std::process::exit(exit_code);
             }
@@ -199,8 +199,14 @@ fn main() {
     }
 }
 
-fn write_hist_file(path: &Option<String>, command: &str) {
+fn write_hist_file(path: &Option<String>, command: &str, piped: bool) {
     if let Some(p) = path {
-        let _ = std::fs::write(p, command);
+        // When piped, prefix with comment so user can edit but won't accidentally run
+        let hist_cmd = if piped {
+            format!("# piped | {}", command)
+        } else {
+            command.to_string()
+        };
+        let _ = std::fs::write(p, hist_cmd);
     }
 }
