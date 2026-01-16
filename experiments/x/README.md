@@ -205,6 +205,10 @@ $ x fix it
 │ gcc main.c -fsyntax-only  # or suggests the actual fix
 ```
 
+## Credits
+
+Built with [Claude](https://claude.ai) by Anthropic.
+
 ## License
 
 MIT

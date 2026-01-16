@@ -13,6 +13,7 @@ const VERSION: &str = concat!(
 #[derive(Parser, Debug)]
 #[command(name = "x")]
 #[command(about = "Fast terminal LLM command generator")]
+#[command(after_help = "Built with Claude (https://claude.ai)")]
 #[command(version = VERSION)]
 pub struct Cli {
     /// The natural language request for command generation
