@@ -127,7 +127,9 @@ fn edit_command(_command: &str) -> Option<String> {
 }
 
 pub fn execute_command(command: &str) -> i32 {
-    let status = Command::new("sh")
+    // Use user's shell for proper builtin support (e.g., type -a)
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
+    let status = Command::new(&shell)
         .arg("-c")
         .arg(command)
         .status();
