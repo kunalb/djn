@@ -121,6 +121,37 @@ pub fn generate_command(
     }
 }
 
+/// Ensure gemini settings file exists with tools disabled
+fn ensure_gemini_settings() -> Result<std::path::PathBuf, String> {
+    let config_dir = std::env::var("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::home_dir()
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+                .join(".config")
+        })
+        .join("x")
+        .join("gemini");
+
+    let settings_path = config_dir.join("settings.json");
+
+    if !settings_path.exists() {
+        std::fs::create_dir_all(&config_dir)
+            .map_err(|e| format!("Failed to create gemini config dir: {}", e))?;
+
+        // Disable all tools to prevent gemini from executing commands
+        let settings = r#"{
+  "tools": {
+    "coreTools": []
+  }
+}"#;
+        std::fs::write(&settings_path, settings)
+            .map_err(|e| format!("Failed to write gemini settings: {}", e))?;
+    }
+
+    Ok(settings_path)
+}
+
 fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, String> {
     let exe = Provider::Claude.find_executable()
         .ok_or_else(|| "claude CLI not found. Install from: https://claude.ai/code".to_string())?;
@@ -146,9 +177,13 @@ fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, Str
     use std::io::Write;
 
     let exe = Provider::Gemini.find_executable()
-        .ok_or_else(|| "gemini CLI not found. Install from: https://github.com/anthropics/gemini-cli".to_string())?;
+        .ok_or_else(|| "gemini CLI not found. Install from: https://github.com/google-gemini/gemini-cli".to_string())?;
+
+    // Create safe gemini settings that disable tool execution
+    let settings_path = ensure_gemini_settings()?;
 
     let mut cmd = Command::new(&exe);
+    cmd.env("GEMINI_CLI_SYSTEM_SETTINGS_PATH", &settings_path);
     if let Some(m) = model {
         cmd.args(["-m", m]);
     }
