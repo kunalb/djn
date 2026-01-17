@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
@@ -13,10 +13,21 @@ const DELETE_BG: Color = Color::Rgb(80, 20, 20);
 const INSERT_BG: Color = Color::Rgb(20, 60, 20);
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
+    // Calculate header height based on whether details are expanded
+    let header_height = if app.show_commit_details {
+        // Expanded: commit info + message lines + files (capped) + borders
+        let (message, files) = app.get_commit_details().unwrap_or_default();
+        let message_lines = message.lines().count().min(5) as u16;
+        let file_lines = files.len().min(8) as u16;
+        3 + message_lines + file_lines + 2 // header + message + files + separators
+    } else {
+        3
+    };
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
+            Constraint::Length(header_height),
             Constraint::Min(0),
             Constraint::Length(3),
         ])
@@ -25,34 +36,89 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_header(frame, app, chunks[0]);
     draw_content(frame, app, chunks[1]);
     draw_footer(frame, app, chunks[2]);
-
-    // Draw commit details popup if active
-    if app.show_commit_details {
-        draw_commit_details(frame, app);
-    }
 }
 
 fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
     let commit = app.current_commit();
 
-    let header_text = format!(
-        " {} | {} | {} | {}",
-        commit.short_hash,
-        commit.author,
-        commit.date.format("%Y-%m-%d %H:%M"),
-        commit.message
-    );
+    if app.show_commit_details {
+        // Expanded header with full details
+        let (message, files) = app.get_commit_details().unwrap_or_default();
 
-    let header = Paragraph::new(header_text)
-        .style(Style::default().fg(Color::White))
-        .block(
+        let mut lines: Vec<Line> = Vec::new();
+
+        // Commit info line
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!(" {} ", commit.hash[..12].to_string()),
+                Style::default().fg(Color::Yellow),
+            ),
+            Span::raw("| "),
+            Span::styled(&commit.author, Style::default().fg(Color::Cyan)),
+            Span::raw(" | "),
+            Span::styled(
+                commit.date.format("%Y-%m-%d %H:%M:%S").to_string(),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]));
+
+        // Message lines (capped at 5)
+        lines.push(Line::from(Span::styled(
+            "─── Message ───",
+            Style::default().fg(Color::DarkGray),
+        )));
+        for line in message.lines().take(5) {
+            lines.push(Line::from(Span::styled(
+                format!(" {}", line),
+                Style::default().fg(Color::White),
+            )));
+        }
+
+        // Files list with selection
+        lines.push(Line::from(Span::styled(
+            format!("─── Files ({}) ───", files.len()),
+            Style::default().fg(Color::DarkGray),
+        )));
+        for (i, file) in files.iter().take(8).enumerate() {
+            let is_selected = i == app.details_selected_file;
+            let prefix = if is_selected { " ▶ " } else { "   " };
+            let style = if is_selected {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            lines.push(Line::from(Span::styled(format!("{}{}", prefix, file), style)));
+        }
+
+        let header = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!(" {} ", app.file_path.display()))
+                .title(format!(" {} (i: collapse, j/k: select, Enter: open) ", app.file_path.display()))
                 .title_style(Style::default().add_modifier(Modifier::BOLD)),
         );
 
-    frame.render_widget(header, area);
+        frame.render_widget(header, area);
+    } else {
+        // Collapsed single-line header
+        let header_text = format!(
+            " {} | {} | {} | {}",
+            commit.short_hash,
+            commit.author,
+            commit.date.format("%Y-%m-%d %H:%M"),
+            commit.message
+        );
+
+        let header = Paragraph::new(header_text)
+            .style(Style::default().fg(Color::White))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!(" {} ", app.file_path.display()))
+                    .title_style(Style::default().add_modifier(Modifier::BOLD)),
+            );
+
+        frame.render_widget(header, area);
+    }
 }
 
 fn draw_content(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -535,94 +601,4 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
         .block(Block::default().borders(Borders::ALL));
 
     frame.render_widget(footer, area);
-}
-
-fn draw_commit_details(frame: &mut Frame, app: &App) {
-    let (message, files) = match app.get_commit_details() {
-        Some(details) => details,
-        None => return,
-    };
-
-    let commit = app.current_commit();
-    let area = frame.area();
-
-    // Center popup, 80% width, 70% height
-    let popup_width = (area.width as f32 * 0.8) as u16;
-    let popup_height = (area.height as f32 * 0.7) as u16;
-    let popup_x = (area.width - popup_width) / 2;
-    let popup_y = (area.height - popup_height) / 2;
-
-    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
-
-    // Clear the background
-    frame.render_widget(Clear, popup_area);
-
-    // Split popup into message area and files list
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(5),    // Message
-            Constraint::Length(files.len().min(10) as u16 + 2), // Files list
-            Constraint::Length(2), // Help
-        ])
-        .split(popup_area);
-
-    // Header with commit info
-    let header = Paragraph::new(format!(
-        " {} | {} | {}",
-        commit.hash[..12].to_string(),
-        commit.author,
-        commit.date.format("%Y-%m-%d %H:%M:%S")
-    ))
-    .style(Style::default().fg(Color::White))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(" Commit Details ")
-            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-    );
-    frame.render_widget(header, chunks[0]);
-
-    // Full commit message
-    let message_widget = Paragraph::new(message.trim())
-        .wrap(Wrap { trim: false })
-        .style(Style::default().fg(Color::White))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Message ")
-                .title_style(Style::default().fg(Color::Cyan)),
-        );
-    frame.render_widget(message_widget, chunks[1]);
-
-    // Files list with selection
-    let file_lines: Vec<Line> = files
-        .iter()
-        .enumerate()
-        .map(|(i, file)| {
-            let is_selected = i == app.details_selected_file;
-            let prefix = if is_selected { "▶ " } else { "  " };
-            let style = if is_selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(Color::White)
-            };
-            Line::from(Span::styled(format!("{}{}", prefix, file), style))
-        })
-        .collect();
-
-    let files_widget = Paragraph::new(file_lines).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(format!(" Files Changed ({}) ", files.len()))
-            .title_style(Style::default().fg(Color::Magenta)),
-    );
-    frame.render_widget(files_widget, chunks[2]);
-
-    // Help text
-    let help = Paragraph::new(" j/k: select file | Enter: open file | i/Esc: close")
-        .style(Style::default().fg(Color::DarkGray))
-        .block(Block::default().borders(Borders::TOP));
-    frame.render_widget(help, chunks[3]);
 }
