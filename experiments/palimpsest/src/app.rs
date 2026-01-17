@@ -16,8 +16,7 @@ pub enum CollapsedRow {
     Normal(usize), // index into full rows
     /// A collapsed section indicator
     Collapsed {
-        start_idx: usize,  // first hidden row index
-        end_idx: usize,    // last hidden row index (inclusive)
+        start_idx: usize,
         hidden_count: usize,
     },
 }
@@ -153,11 +152,9 @@ impl App {
                 while i < rows.len() && !is_context[i] {
                     i += 1;
                 }
-                let end = i - 1;
                 collapsed.push(CollapsedRow::Collapsed {
                     start_idx: start,
-                    end_idx: end,
-                    hidden_count: end - start + 1,
+                    hidden_count: i - start,
                 });
             }
         }
