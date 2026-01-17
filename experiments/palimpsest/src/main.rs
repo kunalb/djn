@@ -147,10 +147,25 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                             // Open selected file
                             if let Some(file_path) = app.get_selected_file_path() {
                                 if file_path.exists() {
+                                    // Show loading indicator
+                                    let file_name = file_path.file_name()
+                                        .map(|n| n.to_string_lossy().to_string())
+                                        .unwrap_or_else(|| "file".to_string());
+                                    app.loading_file = Some(file_name);
+                                    terminal.draw(|f| ui::draw(f, app))?;
+
                                     // Switch to viewing this file
                                     let _ = app.switch_to_file(file_path);
                                 }
                             }
+                        }
+                    }
+                    KeyCode::Backspace | KeyCode::Char('-') => {
+                        // Go back to previous file
+                        if app.has_file_history() {
+                            app.loading_file = Some("previous file".to_string());
+                            terminal.draw(|f| ui::draw(f, app))?;
+                            let _ = app.go_back_file();
                         }
                     }
                     _ => {}

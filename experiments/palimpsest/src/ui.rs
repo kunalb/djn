@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
@@ -36,6 +36,36 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_header(frame, app, chunks[0]);
     draw_content(frame, app, chunks[1]);
     draw_footer(frame, app, chunks[2]);
+
+    // Show loading overlay if loading a file
+    if let Some(ref file_name) = app.loading_file {
+        draw_loading(frame, file_name);
+    }
+}
+
+fn draw_loading(frame: &mut Frame, file_name: &str) {
+    let area = frame.area();
+    let popup_width = 50.min(area.width - 4);
+    let popup_height = 3;
+    let popup_x = (area.width - popup_width) / 2;
+    let popup_y = (area.height - popup_height) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    frame.render_widget(Clear, popup_area);
+
+    let loading_text = format!(" Loading {}... ", file_name);
+    let popup = Paragraph::new(loading_text)
+        .style(Style::default().fg(Color::Yellow))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow))
+                .title(" Please wait ")
+                .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        );
+
+    frame.render_widget(popup, popup_area);
 }
 
 fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
@@ -591,9 +621,15 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
         "c: collapse"
     };
 
+    let back_hint = if app.has_file_history() {
+        " | -: back"
+    } else {
+        ""
+    };
+
     let footer_text = format!(
-        "{}| {} | j/k: focus | n/N: change | b/B: blame | i: info | {} | q: quit",
-        position, nav_hint, collapse_hint
+        "{}| {} | j/k: focus | n/N: change | b/B: blame | i: info | {}{} | q: quit",
+        position, nav_hint, collapse_hint, back_hint
     );
 
     let footer = Paragraph::new(footer_text)

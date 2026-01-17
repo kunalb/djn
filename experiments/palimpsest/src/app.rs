@@ -33,6 +33,8 @@ pub struct App {
     pub expanded_sections: HashSet<usize>, // start indices of expanded sections
     pub show_commit_details: bool,
     pub details_selected_file: usize,
+    pub loading_file: Option<String>, // Shows loading indicator when Some
+    pub file_history: Vec<PathBuf>,   // Stack of previously viewed files
     pub highlighter: Highlighter,
     content_cache: HashMap<String, String>,
     highlight_cache: HashMap<String, Vec<HighlightedLine>>,
@@ -62,6 +64,8 @@ impl App {
             expanded_sections: HashSet::new(),
             show_commit_details: false,
             details_selected_file: 0,
+            loading_file: None,
+            file_history: Vec::new(),
             highlighter: Highlighter::new(),
             content_cache: HashMap::new(),
             highlight_cache: HashMap::new(),
@@ -440,9 +444,14 @@ impl App {
 
     /// Switch to viewing a different file
     pub fn switch_to_file(&mut self, file_path: PathBuf) -> Result<()> {
+        // Save current file to history before switching
+        self.file_history.push(self.file_path.clone());
+
         let commits = self.repo.get_file_history(&file_path)?;
 
         if commits.is_empty() {
+            // Remove from history if switch fails
+            self.file_history.pop();
             anyhow::bail!("No commits found for file: {}", file_path.display());
         }
 
@@ -458,9 +467,45 @@ impl App {
         self.expanded_sections.clear();
         self.show_commit_details = false;
         self.details_selected_file = 0;
+        self.loading_file = None;
         self.content_cache.clear();
         self.highlight_cache.clear();
 
         Ok(())
+    }
+
+    /// Go back to the previous file in history
+    pub fn go_back_file(&mut self) -> Result<bool> {
+        if let Some(prev_file) = self.file_history.pop() {
+            let commits = self.repo.get_file_history(&prev_file)?;
+
+            if commits.is_empty() {
+                anyhow::bail!("No commits found for file: {}", prev_file.display());
+            }
+
+            let extension = Highlighter::get_extension(&prev_file);
+
+            self.file_path = prev_file;
+            self.extension = extension;
+            self.commits = commits;
+            self.current_index = 0;
+            self.scroll_offset = 0;
+            self.focused_line = 0;
+            self.collapsed_mode = false;
+            self.expanded_sections.clear();
+            self.show_commit_details = false;
+            self.details_selected_file = 0;
+            self.loading_file = None;
+            self.content_cache.clear();
+            self.highlight_cache.clear();
+
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn has_file_history(&self) -> bool {
+        !self.file_history.is_empty()
     }
 }
