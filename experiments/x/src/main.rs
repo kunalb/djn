@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod context;
 mod executor;
+mod history;
 mod llm;
 
 use clap::Parser;
@@ -10,6 +11,7 @@ use cli::Cli;
 use config::Config;
 use context::Context;
 use executor::{confirm_command, execute_command, print_command, ConfirmResult, Spinner};
+use history::{History, HistoryEntry, Outcome};
 use llm::{build_prompt, generate_command, Provider};
 
 const ZSH_INIT: &str = r#"x() {
@@ -124,9 +126,16 @@ fn main() {
         .map(|m| format!("{}/{}", provider.display_name(), m))
         .unwrap_or_else(|| provider.display_name().to_string());
 
+    // Open history database (non-fatal if it fails)
+    let history = History::open().ok();
+
+    // Generate session ID for tracking refinements
+    let session_id = uuid::Uuid::new_v4().to_string();
+
     // Generate command with optional refinement loop
     let mut request = cli.request_string();
     let mut prev_command: Option<String> = None;
+    let mut prev_generation_id: Option<i64> = None;
 
     loop {
         // Build the full request including refinement context
@@ -143,12 +152,10 @@ fn main() {
             Some(Spinner::new(&model_display))
         };
 
-        let command = match generate_command(provider, model_ref, &full_request, &context) {
+        let (command, duration_ms) = match generate_command(provider, model_ref, &full_request, &context) {
             Ok(cmd) => {
-                if let Some(s) = spinner {
-                    let _ = s.stop();
-                }
-                cmd
+                let duration = spinner.map(|s| s.stop()).unwrap_or_default();
+                (cmd, duration.as_millis() as u64)
             }
             Err(e) => {
                 if let Some(s) = spinner {
@@ -165,6 +172,25 @@ fn main() {
             return;
         }
 
+        // Helper to record history
+        let record = |outcome: Outcome, edited: Option<&str>, exit_code: Option<i32>| {
+            if let Some(ref h) = history {
+                let _ = h.record(&HistoryEntry {
+                    cwd: context.cwd.clone(),
+                    request: request.clone(),
+                    provider: provider.display_name().to_string(),
+                    model: model_ref.map(|s| s.to_string()),
+                    duration_ms,
+                    command: command.clone(),
+                    outcome,
+                    edited_command: edited.map(|s| s.to_string()),
+                    session_id: session_id.clone(),
+                    refinement_of: prev_generation_id,
+                    exit_code,
+                });
+            }
+        };
+
         if cli.yes {
             // Auto-run mode - show command and run
             eprintln!("│ \x1b[1m{}\x1b[0m", command);
@@ -172,6 +198,7 @@ fn main() {
             eprintln!();
             write_hist_file(&cli.hist_file, &command, context.stdin_is_pipe);
             let exit_code = execute_command(&command);
+            record(Outcome::Executed, None, Some(exit_code));
             std::process::exit(exit_code);
         }
 
@@ -180,18 +207,39 @@ fn main() {
             ConfirmResult::Yes => {
                 write_hist_file(&cli.hist_file, &command, context.stdin_is_pipe);
                 let exit_code = execute_command(&command);
+                record(Outcome::Executed, None, Some(exit_code));
                 std::process::exit(exit_code);
             }
             ConfirmResult::Edit(edited) => {
                 write_hist_file(&cli.hist_file, &edited, context.stdin_is_pipe);
                 let exit_code = execute_command(&edited);
+                record(Outcome::Edited, Some(&edited), Some(exit_code));
                 std::process::exit(exit_code);
             }
             ConfirmResult::No => {
+                record(Outcome::Cancelled, None, None);
                 std::process::exit(0);
             }
             ConfirmResult::Refine(instructions) => {
-                // Update request with refinement and loop
+                // Record the refinement, capturing the generation ID for linking
+                if let Some(ref h) = history {
+                    if let Ok(id) = h.record(&HistoryEntry {
+                        cwd: context.cwd.clone(),
+                        request: request.clone(),
+                        provider: provider.display_name().to_string(),
+                        model: model_ref.map(|s| s.to_string()),
+                        duration_ms,
+                        command: command.clone(),
+                        outcome: Outcome::Refined,
+                        edited_command: None,
+                        session_id: session_id.clone(),
+                        refinement_of: prev_generation_id,
+                        exit_code: None,
+                    }) {
+                        prev_generation_id = Some(id);
+                    }
+                }
+                // Update for next iteration
                 prev_command = Some(command);
                 request = instructions;
             }

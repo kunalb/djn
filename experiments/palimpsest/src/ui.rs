@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{App, HighlightedLine};
 use crate::git::DiffTag;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -7,6 +7,10 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
+
+// More visible diff colors
+const DELETE_BG: Color = Color::Rgb(80, 20, 20);
+const INSERT_BG: Color = Color::Rgb(20, 60, 20);
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -60,31 +64,57 @@ fn draw_content(frame: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
-fn highlight_line<'a>(app: &App, content: &str, base_bg: Option<Color>, is_focused: bool) -> Vec<Span<'a>> {
-    let highlighted = app.highlighter.highlight_line(content, &app.extension);
+fn apply_highlight_with_bg<'a>(
+    highlighted: &HighlightedLine,
+    base_bg: Option<Color>,
+    is_focused: bool,
+    max_width: usize,
+) -> Vec<Span<'a>> {
+    let mut spans = Vec::new();
+    let mut total_len = 0;
 
-    highlighted
-        .into_iter()
-        .map(|(style, text)| {
-            let mut final_style = style;
-            if let Some(bg) = base_bg {
-                final_style = final_style.bg(bg);
-            }
-            if is_focused {
-                final_style = final_style.add_modifier(Modifier::BOLD);
-            }
-            Span::styled(text, final_style)
-        })
-        .collect()
+    for (style, text) in highlighted {
+        if total_len >= max_width {
+            break;
+        }
+
+        let remaining = max_width - total_len;
+        let display_text: String = text.chars().take(remaining).collect();
+        total_len += display_text.len();
+
+        let mut final_style = *style;
+        if let Some(bg) = base_bg {
+            final_style = final_style.bg(bg);
+        }
+        if is_focused {
+            final_style = final_style.add_modifier(Modifier::BOLD);
+        }
+        spans.push(Span::styled(display_text, final_style));
+    }
+
+    spans
 }
 
 fn draw_diff_view(
     frame: &mut Frame,
-    app: &App,
+    app: &mut App,
     area: Rect,
     rows: Vec<crate::git::SideBySideRow>,
     height: usize,
 ) {
+    // Get highlighted content for both versions
+    let current_hash = app.commits[app.current_index].hash.clone();
+    let current_path = app.commits[app.current_index].file_path.clone();
+    let previous_hash = app.commits[app.current_index + 1].hash.clone();
+    let previous_path = app.commits[app.current_index + 1].file_path.clone();
+
+    let current_highlighted = app
+        .get_highlighted_content(&current_hash, &current_path)
+        .unwrap_or_default();
+    let previous_highlighted = app
+        .get_highlighted_content(&previous_hash, &previous_path)
+        .unwrap_or_default();
+
     // Split area into two columns
     let columns = Layout::default()
         .direction(Direction::Horizontal)
@@ -92,6 +122,7 @@ fn draw_diff_view(
         .split(area);
 
     let half_width = columns[0].width.saturating_sub(2) as usize;
+    let content_width = half_width.saturating_sub(7);
 
     let mut left_lines: Vec<Line> = Vec::new();
     let mut right_lines: Vec<Line> = Vec::new();
@@ -107,7 +138,7 @@ fn draw_diff_view(
             .unwrap_or_else(|| "    ".to_string());
 
         let left_bg = match row.left_tag {
-            Some(DiffTag::Delete) => Some(Color::Rgb(40, 0, 0)),
+            Some(DiffTag::Delete) => Some(DELETE_BG),
             _ => None,
         };
 
@@ -115,24 +146,28 @@ fn draw_diff_view(
         if is_focused {
             left_num_style = left_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
         }
-
-        let left_content = truncate(&row.left_content, half_width.saturating_sub(7));
+        if row.left_tag == Some(DiffTag::Delete) {
+            left_num_style = left_num_style.bg(DELETE_BG);
+        }
 
         let mut left_spans = vec![
             Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
             Span::styled(format!("{} ", left_line_num), left_num_style),
         ];
 
-        if row.left_tag.is_some() {
-            left_spans.extend(highlight_line(app, &left_content, left_bg, is_focused));
-        } else {
-            // Empty side - just show background
-            let style = if let Some(bg) = left_bg {
-                Style::default().bg(bg)
-            } else {
-                Style::default().fg(Color::DarkGray)
-            };
-            left_spans.push(Span::styled(pad_to_width(&left_content, half_width.saturating_sub(7)), style));
+        if let Some(line_num) = row.left_line_num {
+            // Get highlighted content for this line
+            if let Some(highlighted) = previous_highlighted.get(line_num - 1) {
+                left_spans.extend(apply_highlight_with_bg(highlighted, left_bg, is_focused, content_width));
+            }
+        }
+
+        // Pad the line with background color if needed
+        if left_bg.is_some() {
+            left_spans.push(Span::styled(
+                " ".repeat(content_width),
+                Style::default().bg(left_bg.unwrap()),
+            ));
         }
 
         left_lines.push(Line::from(left_spans));
@@ -144,7 +179,7 @@ fn draw_diff_view(
             .unwrap_or_else(|| "    ".to_string());
 
         let right_bg = match row.right_tag {
-            Some(DiffTag::Insert) => Some(Color::Rgb(0, 40, 0)),
+            Some(DiffTag::Insert) => Some(INSERT_BG),
             _ => None,
         };
 
@@ -152,22 +187,26 @@ fn draw_diff_view(
         if is_focused {
             right_num_style = right_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
         }
-
-        let right_content = truncate(&row.right_content, half_width.saturating_sub(6));
+        if row.right_tag == Some(DiffTag::Insert) {
+            right_num_style = right_num_style.bg(INSERT_BG);
+        }
 
         let mut right_spans = vec![
             Span::styled(format!("{} ", right_line_num), right_num_style),
         ];
 
-        if row.right_tag.is_some() {
-            right_spans.extend(highlight_line(app, &right_content, right_bg, is_focused));
-        } else {
-            let style = if let Some(bg) = right_bg {
-                Style::default().bg(bg)
-            } else {
-                Style::default().fg(Color::DarkGray)
-            };
-            right_spans.push(Span::styled(pad_to_width(&right_content, half_width.saturating_sub(6)), style));
+        if let Some(line_num) = row.right_line_num {
+            if let Some(highlighted) = current_highlighted.get(line_num - 1) {
+                right_spans.extend(apply_highlight_with_bg(highlighted, right_bg, is_focused, content_width));
+            }
+        }
+
+        // Pad the line with background color if needed
+        if right_bg.is_some() {
+            right_spans.push(Span::styled(
+                " ".repeat(content_width),
+                Style::default().bg(right_bg.unwrap()),
+            ));
         }
 
         right_lines.push(Line::from(right_spans));
@@ -204,53 +243,36 @@ fn draw_diff_view(
     frame.render_widget(right_panel, columns[1]);
 }
 
-fn truncate(s: &str, width: usize) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    if chars.len() > width {
-        chars[..width].iter().collect()
-    } else {
-        s.to_string()
-    }
-}
-
-fn pad_to_width(s: &str, width: usize) -> String {
-    format!("{:<width$}", s, width = width)
-}
-
 fn draw_content_view(frame: &mut Frame, app: &mut App, area: Rect, height: usize) {
-    let content_result = app.get_current_content();
+    let hash = app.commits[app.current_index].hash.clone();
+    let path = app.commits[app.current_index].file_path.clone();
+    let highlighted = app
+        .get_highlighted_content(&hash, &path)
+        .unwrap_or_default();
 
-    let lines: Vec<Line> = match content_result {
-        Ok(content) => {
-            content
-                .lines()
-                .enumerate()
-                .map(|(i, line)| {
-                    let is_focused = i == app.focused_line;
-                    let mut line_num_style = Style::default().fg(Color::DarkGray);
+    let lines: Vec<Line> = highlighted
+        .iter()
+        .enumerate()
+        .map(|(i, line_spans)| {
+            let is_focused = i == app.focused_line;
+            let mut line_num_style = Style::default().fg(Color::DarkGray);
 
-                    if is_focused {
-                        line_num_style = line_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
-                    }
+            if is_focused {
+                line_num_style = line_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
+            }
 
-                    let mut spans = vec![
-                        Span::styled(if is_focused { "▶" } else { " " }, Style::default().fg(Color::Yellow)),
-                        Span::styled(format!("{:4} ", i + 1), line_num_style),
-                    ];
+            let mut spans = vec![
+                Span::styled(if is_focused { "▶" } else { " " }, Style::default().fg(Color::Yellow)),
+                Span::styled(format!("{:4} ", i + 1), line_num_style),
+            ];
 
-                    spans.extend(highlight_line(app, line, None, is_focused));
+            spans.extend(apply_highlight_with_bg(line_spans, None, is_focused, usize::MAX));
 
-                    Line::from(spans)
-                })
-                .skip(app.scroll_offset)
-                .take(height)
-                .collect()
-        }
-        Err(e) => vec![Line::from(Span::styled(
-            format!("Error loading content: {}", e),
-            Style::default().fg(Color::Red),
-        ))],
-    };
+            Line::from(spans)
+        })
+        .skip(app.scroll_offset)
+        .take(height)
+        .collect();
 
     let paragraph = Paragraph::new(lines);
 

@@ -1,8 +1,11 @@
 use crate::git::{build_side_by_side, compute_diff, Commit, DiffLine, GitRepo, SideBySideRow};
 use crate::highlight::Highlighter;
 use anyhow::Result;
+use ratatui::style::Style;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+pub type HighlightedLine = Vec<(Style, String)>;
 
 pub struct App {
     pub file_path: PathBuf,
@@ -14,6 +17,7 @@ pub struct App {
     pub should_quit: bool,
     pub highlighter: Highlighter,
     content_cache: HashMap<String, String>,
+    highlight_cache: HashMap<String, Vec<HighlightedLine>>,
     repo: GitRepo,
 }
 
@@ -38,8 +42,26 @@ impl App {
             should_quit: false,
             highlighter: Highlighter::new(),
             content_cache: HashMap::new(),
+            highlight_cache: HashMap::new(),
             repo,
         })
+    }
+
+    pub fn get_highlighted_content(&mut self, hash: &str, file_path: &str) -> Result<Vec<HighlightedLine>> {
+        let key = format!("{}:{}", hash, file_path);
+
+        if let Some(highlighted) = self.highlight_cache.get(&key) {
+            return Ok(highlighted.clone());
+        }
+
+        let content = self.get_content(hash, file_path)?;
+        let highlighted: Vec<HighlightedLine> = content
+            .lines()
+            .map(|line| self.highlighter.highlight_line(line, &self.extension))
+            .collect();
+
+        self.highlight_cache.insert(key.clone(), highlighted.clone());
+        Ok(highlighted)
     }
 
     pub fn current_commit(&self) -> &Commit {
@@ -163,11 +185,6 @@ impl App {
     pub fn get_side_by_side(&mut self) -> Option<Vec<SideBySideRow>> {
         let diff = self.get_diff_to_previous().ok()??;
         Some(build_side_by_side(&diff))
-    }
-
-    pub fn get_current_content(&mut self) -> Result<String> {
-        let commit = &self.commits[self.current_index];
-        self.get_content(&commit.hash.clone(), &commit.file_path.clone())
     }
 
     pub fn get_diff_to_previous(&mut self) -> Result<Option<Vec<DiffLine>>> {

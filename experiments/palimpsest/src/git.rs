@@ -168,7 +168,6 @@ pub fn compute_diff(old: &str, new: &str) -> Vec<DiffLine> {
 
         lines.push(DiffLine {
             tag,
-            content: change.value().to_string(),
             old_line: change.old_index().map(|i| i + 1),
             new_line: change.new_index().map(|i| i + 1),
         });
@@ -187,7 +186,6 @@ pub enum DiffTag {
 #[derive(Clone, Debug)]
 pub struct DiffLine {
     pub tag: DiffTag,
-    pub content: String,
     pub old_line: Option<usize>,
     pub new_line: Option<usize>,
 }
@@ -195,10 +193,8 @@ pub struct DiffLine {
 #[derive(Clone, Debug)]
 pub struct SideBySideRow {
     pub left_line_num: Option<usize>,
-    pub left_content: String,
     pub left_tag: Option<DiffTag>,
     pub right_line_num: Option<usize>,
-    pub right_content: String,
     pub right_tag: Option<DiffTag>,
 }
 
@@ -218,10 +214,8 @@ pub fn build_side_by_side(diff_lines: &[DiffLine]) -> Vec<SideBySideRow> {
             DiffTag::Equal => {
                 rows.push(SideBySideRow {
                     left_line_num: diff_lines[i].old_line,
-                    left_content: diff_lines[i].content.trim_end_matches('\n').to_string(),
                     left_tag: Some(DiffTag::Equal),
                     right_line_num: diff_lines[i].new_line,
-                    right_content: diff_lines[i].content.trim_end_matches('\n').to_string(),
                     right_tag: Some(DiffTag::Equal),
                 });
                 i += 1;
@@ -246,14 +240,8 @@ pub fn build_side_by_side(diff_lines: &[DiffLine]) -> Vec<SideBySideRow> {
                     let right = inserts.get(j);
                     rows.push(SideBySideRow {
                         left_line_num: left.and_then(|d| d.old_line),
-                        left_content: left
-                            .map(|d| d.content.trim_end_matches('\n').to_string())
-                            .unwrap_or_default(),
                         left_tag: left.map(|_| DiffTag::Delete),
                         right_line_num: right.and_then(|d| d.new_line),
-                        right_content: right
-                            .map(|d| d.content.trim_end_matches('\n').to_string())
-                            .unwrap_or_default(),
                         right_tag: right.map(|_| DiffTag::Insert),
                     });
                 }
@@ -262,10 +250,8 @@ pub fn build_side_by_side(diff_lines: &[DiffLine]) -> Vec<SideBySideRow> {
                 // Standalone insert (no preceding delete)
                 rows.push(SideBySideRow {
                     left_line_num: None,
-                    left_content: String::new(),
                     left_tag: None,
                     right_line_num: diff_lines[i].new_line,
-                    right_content: diff_lines[i].content.trim_end_matches('\n').to_string(),
                     right_tag: Some(DiffTag::Insert),
                 });
                 i += 1;
