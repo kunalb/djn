@@ -1,4 +1,4 @@
-use crate::app::{App, HighlightedLine};
+use crate::app::{App, CollapsedRow, HighlightedLine};
 use crate::git::DiffTag;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -56,7 +56,11 @@ fn draw_content(frame: &mut Frame, app: &mut App, area: Rect) {
     // Try to get diff view, fall back to content view
     match app.get_side_by_side() {
         Some(rows) => {
-            draw_diff_view(frame, app, area, rows, inner_height);
+            if app.collapsed_mode {
+                draw_collapsed_diff_view(frame, app, area, rows, inner_height);
+            } else {
+                draw_diff_view(frame, app, area, rows, inner_height);
+            }
         }
         None => {
             draw_content_view(frame, app, area, inner_height);
@@ -93,6 +97,183 @@ fn apply_highlight_with_bg<'a>(
     }
 
     spans
+}
+
+fn draw_collapsed_diff_view(
+    frame: &mut Frame,
+    app: &mut App,
+    area: Rect,
+    full_rows: Vec<crate::git::SideBySideRow>,
+    height: usize,
+) {
+    let collapsed_rows = match app.get_collapsed_rows() {
+        Some(rows) => rows,
+        None => return,
+    };
+
+    // Get highlighted content for both versions
+    let current_hash = app.commits[app.current_index].hash.clone();
+    let current_path = app.commits[app.current_index].file_path.clone();
+    let previous_hash = app.commits[app.current_index + 1].hash.clone();
+    let previous_path = app.commits[app.current_index + 1].file_path.clone();
+
+    let current_highlighted = app
+        .get_highlighted_content(&current_hash, &current_path)
+        .unwrap_or_default();
+    let previous_highlighted = app
+        .get_highlighted_content(&previous_hash, &previous_path)
+        .unwrap_or_default();
+
+    // Split area into two columns
+    let columns = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    let half_width = columns[0].width.saturating_sub(2) as usize;
+    let content_width = half_width.saturating_sub(7);
+
+    let mut left_lines: Vec<Line> = Vec::new();
+    let mut right_lines: Vec<Line> = Vec::new();
+
+    for (idx, collapsed_row) in collapsed_rows.iter().enumerate() {
+        let is_focused = idx == app.focused_line;
+        let focus_indicator = if is_focused { "▶" } else { " " };
+
+        match collapsed_row {
+            CollapsedRow::Normal(row_idx) => {
+                let row = &full_rows[*row_idx];
+
+                // Left side
+                let left_line_num = row
+                    .left_line_num
+                    .map(|n| format!("{:4}", n))
+                    .unwrap_or_else(|| "    ".to_string());
+
+                let left_bg = match row.left_tag {
+                    Some(DiffTag::Delete) => Some(DELETE_BG),
+                    _ => None,
+                };
+
+                let mut left_num_style = Style::default().fg(Color::DarkGray);
+                if is_focused {
+                    left_num_style = left_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
+                }
+                if row.left_tag == Some(DiffTag::Delete) {
+                    left_num_style = left_num_style.bg(DELETE_BG);
+                }
+
+                let mut left_spans = vec![
+                    Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
+                    Span::styled(format!("{} ", left_line_num), left_num_style),
+                ];
+
+                if let Some(line_num) = row.left_line_num {
+                    if let Some(highlighted) = previous_highlighted.get(line_num - 1) {
+                        left_spans.extend(apply_highlight_with_bg(highlighted, left_bg, is_focused, content_width));
+                    }
+                }
+
+                if left_bg.is_some() {
+                    left_spans.push(Span::styled(
+                        " ".repeat(content_width),
+                        Style::default().bg(left_bg.unwrap()),
+                    ));
+                }
+
+                left_lines.push(Line::from(left_spans));
+
+                // Right side
+                let right_line_num = row
+                    .right_line_num
+                    .map(|n| format!("{:4}", n))
+                    .unwrap_or_else(|| "    ".to_string());
+
+                let right_bg = match row.right_tag {
+                    Some(DiffTag::Insert) => Some(INSERT_BG),
+                    _ => None,
+                };
+
+                let mut right_num_style = Style::default().fg(Color::DarkGray);
+                if is_focused {
+                    right_num_style = right_num_style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
+                }
+                if row.right_tag == Some(DiffTag::Insert) {
+                    right_num_style = right_num_style.bg(INSERT_BG);
+                }
+
+                let mut right_spans = vec![
+                    Span::styled(format!("{} ", right_line_num), right_num_style),
+                ];
+
+                if let Some(line_num) = row.right_line_num {
+                    if let Some(highlighted) = current_highlighted.get(line_num - 1) {
+                        right_spans.extend(apply_highlight_with_bg(highlighted, right_bg, is_focused, content_width));
+                    }
+                }
+
+                if right_bg.is_some() {
+                    right_spans.push(Span::styled(
+                        " ".repeat(content_width),
+                        Style::default().bg(right_bg.unwrap()),
+                    ));
+                }
+
+                right_lines.push(Line::from(right_spans));
+            }
+            CollapsedRow::Collapsed { hidden_count, .. } => {
+                // Render collapsed section indicator
+                let collapse_style = if is_focused {
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+
+                let collapse_text = format!("··· {} lines hidden (press Enter to expand) ···", hidden_count);
+
+                let left_spans = vec![
+                    Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
+                    Span::styled(collapse_text.clone(), collapse_style),
+                ];
+                left_lines.push(Line::from(left_spans));
+
+                let right_spans = vec![
+                    Span::styled(collapse_text, collapse_style),
+                ];
+                right_lines.push(Line::from(right_spans));
+            }
+        }
+    }
+
+    // Apply scrolling
+    let visible_left: Vec<Line> = left_lines
+        .into_iter()
+        .skip(app.scroll_offset)
+        .take(height)
+        .collect();
+
+    let visible_right: Vec<Line> = right_lines
+        .into_iter()
+        .skip(app.scroll_offset)
+        .take(height)
+        .collect();
+
+    let left_panel = Paragraph::new(visible_left).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Previous (collapsed) ")
+            .title_style(Style::default().fg(Color::Red)),
+    );
+
+    let right_panel = Paragraph::new(visible_right).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Current (collapsed) ")
+            .title_style(Style::default().fg(Color::Green)),
+    );
+
+    frame.render_widget(left_panel, columns[0]);
+    frame.render_widget(right_panel, columns[1]);
 }
 
 fn draw_diff_view(
@@ -301,9 +482,15 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
         "← older | → newer"
     };
 
+    let collapse_hint = if app.collapsed_mode {
+        "c: expand all | Enter: expand"
+    } else {
+        "c: collapse"
+    };
+
     let footer_text = format!(
-        "{}| {} | j/k: focus | n/N: change | b/B: blame/before | q: quit",
-        position, nav_hint
+        "{}| {} | j/k: focus | n/N: change | b/B: blame | {} | q: quit",
+        position, nav_hint, collapse_hint
     );
 
     let footer = Paragraph::new(footer_text)

@@ -2,10 +2,25 @@ use crate::git::{build_side_by_side, compute_diff, Commit, DiffLine, GitRepo, Si
 use crate::highlight::Highlighter;
 use anyhow::{Context, Result};
 use ratatui::style::Style;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 pub type HighlightedLine = Vec<(Style, String)>;
+
+pub const CONTEXT_LINES: usize = 3;
+
+/// Represents a row in the collapsed view
+#[derive(Clone, Debug)]
+pub enum CollapsedRow {
+    /// A normal row from the side-by-side diff
+    Normal(usize), // index into full rows
+    /// A collapsed section indicator
+    Collapsed {
+        start_idx: usize,  // first hidden row index
+        end_idx: usize,    // last hidden row index (inclusive)
+        hidden_count: usize,
+    },
+}
 
 pub struct App {
     pub file_path: PathBuf,
@@ -15,6 +30,8 @@ pub struct App {
     pub scroll_offset: usize,
     pub focused_line: usize,
     pub should_quit: bool,
+    pub collapsed_mode: bool,
+    pub expanded_sections: HashSet<usize>, // start indices of expanded sections
     pub highlighter: Highlighter,
     content_cache: HashMap<String, String>,
     highlight_cache: HashMap<String, Vec<HighlightedLine>>,
@@ -40,6 +57,8 @@ impl App {
             scroll_offset: 0,
             focused_line: 0,
             should_quit: false,
+            collapsed_mode: false,
+            expanded_sections: HashSet::new(),
             highlighter: Highlighter::new(),
             content_cache: HashMap::new(),
             highlight_cache: HashMap::new(),
@@ -71,13 +90,96 @@ impl App {
     pub fn go_back(&mut self) {
         if self.current_index < self.commits.len() - 1 {
             self.current_index += 1;
+            self.expanded_sections.clear();
         }
     }
 
     pub fn go_forward(&mut self) {
         if self.current_index > 0 {
             self.current_index -= 1;
+            self.expanded_sections.clear();
         }
+    }
+
+    pub fn toggle_collapsed_mode(&mut self) {
+        self.collapsed_mode = !self.collapsed_mode;
+        self.focused_line = 0;
+        self.scroll_offset = 0;
+        self.expanded_sections.clear();
+    }
+
+    /// Build the collapsed view with context lines around changes
+    pub fn get_collapsed_rows(&mut self) -> Option<Vec<CollapsedRow>> {
+        let rows = self.get_side_by_side()?;
+        if rows.is_empty() {
+            return Some(vec![]);
+        }
+
+        // Find all change indices
+        let mut is_context: Vec<bool> = vec![false; rows.len()];
+
+        for (i, row) in rows.iter().enumerate() {
+            if row.is_change() {
+                // Mark this line and surrounding context as visible
+                let start = i.saturating_sub(CONTEXT_LINES);
+                let end = (i + CONTEXT_LINES + 1).min(rows.len());
+                for j in start..end {
+                    is_context[j] = true;
+                }
+            }
+        }
+
+        // Check expanded sections
+        for &start_idx in &self.expanded_sections {
+            // Find the end of this collapsed section and mark it all visible
+            let mut j = start_idx;
+            while j < rows.len() && !is_context[j] {
+                is_context[j] = true;
+                j += 1;
+            }
+        }
+
+        // Build collapsed rows
+        let mut collapsed = Vec::new();
+        let mut i = 0;
+
+        while i < rows.len() {
+            if is_context[i] {
+                collapsed.push(CollapsedRow::Normal(i));
+                i += 1;
+            } else {
+                // Start of a collapsed section
+                let start = i;
+                while i < rows.len() && !is_context[i] {
+                    i += 1;
+                }
+                let end = i - 1;
+                collapsed.push(CollapsedRow::Collapsed {
+                    start_idx: start,
+                    end_idx: end,
+                    hidden_count: end - start + 1,
+                });
+            }
+        }
+
+        Some(collapsed)
+    }
+
+    /// Expand the collapsed section at the current focused line
+    pub fn expand_at_focus(&mut self) -> bool {
+        if !self.collapsed_mode {
+            return false;
+        }
+
+        if let Some(collapsed_rows) = self.get_collapsed_rows() {
+            if let Some(row) = collapsed_rows.get(self.focused_line) {
+                if let CollapsedRow::Collapsed { start_idx, .. } = row {
+                    self.expanded_sections.insert(*start_idx);
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn page_down(&mut self, page_size: usize) {

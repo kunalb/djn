@@ -117,6 +117,14 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                         // Jump to commit before the one that introduced this line
                         let _ = app.jump_to_before_line_origin(view_height);
                     }
+                    KeyCode::Char('c') => {
+                        // Toggle collapsed mode
+                        app.toggle_collapsed_mode();
+                    }
+                    KeyCode::Enter => {
+                        // Expand collapsed section at focus
+                        app.expand_at_focus();
+                    }
                     _ => {}
                 }
             }
