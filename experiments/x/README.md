@@ -6,7 +6,7 @@ A fast, minimal terminal utility that uses LLMs to generate shell commands from 
 
 ```
 $ x create a new directory called projects and initialize a git repo in it
-┌ gemini (1.2s)
+┌ gemini/2.5-flash (1.2s)
 │ mkdir projects && cd projects && git init
 └ [Y/n/e/...] y
 
@@ -125,7 +125,7 @@ x [OPTIONS] <REQUEST>...
 When a command is generated, you'll see:
 
 ```
-┌ gemini (1.2s)
+┌ gemini/2.5-flash (1.2s)
 │ ls -la
 └ [Y/n/e/...]
 ```
@@ -139,10 +139,10 @@ When a command is generated, you'll see:
 
 ```
 $ x list files
-┌ gemini (0.8s)
+┌ gemini/2.5-flash (0.8s)
 │ ls
 └ [Y/n/e/...] sort by size, largest first
-┌ gemini (0.6s)
+┌ gemini/2.5-flash (0.6s)
 │ ls -lhS
 └ [Y/n/e/...] y
 
@@ -205,7 +205,7 @@ If a command fails, just ask to fix it:
 $ gcc main.c
 main.c:10: error: expected ';' before '}'
 $ x fix it
-┌ gemini (0.9s)
+┌ gemini/2.5-flash (0.9s)
 │ gcc main.c -fsyntax-only  # or suggests the actual fix
 ```
 
@@ -223,7 +223,7 @@ When piping data to `x`, it detects stdin and generates commands that read from 
 
 ```bash
 $ cat data.json | x extract the user ids
-┌ gemini (0.8s)
+┌ gemini/2.5-flash (0.8s)
 │ jq '.users[].id'
 ```
 

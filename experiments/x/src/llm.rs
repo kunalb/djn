@@ -2,6 +2,17 @@ use std::process::Command;
 
 use crate::context::Context;
 
+/// Resource usage metrics from a child process
+#[derive(Debug, Clone, Default)]
+pub struct ResourceUsage {
+    /// User CPU time in microseconds
+    pub user_time_us: u64,
+    /// System CPU time in microseconds
+    pub system_time_us: u64,
+    /// Maximum resident set size in kilobytes
+    pub max_rss_kb: u64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Provider {
     Claude,
@@ -106,7 +117,7 @@ pub fn generate_command(
     model: Option<&str>,
     request: &str,
     context: &Context,
-) -> Result<String, String> {
+) -> Result<(String, ResourceUsage), String> {
     let full_prompt = format!(
         "{}\n\nContext:\n{}\n\nUser request: {}",
         SYSTEM_PROMPT,
@@ -152,7 +163,9 @@ fn ensure_gemini_settings() -> Result<std::path::PathBuf, String> {
     Ok(settings_path)
 }
 
-fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, String> {
+fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<(String, ResourceUsage), String> {
+    use std::io::Read;
+
     let exe = Provider::Claude.find_executable()
         .ok_or_else(|| "claude CLI not found. Install from: https://claude.ai/code".to_string())?;
 
@@ -170,11 +183,48 @@ fn generate_with_claude(prompt: &str, model: Option<&str>) -> Result<String, Str
         cmd.args(["--model", m]);
     }
 
-    run_command_with_stderr(cmd, "claude")
+    let mut child = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to run claude: {}", e))?;
+
+    let pid = child.id() as i32;
+
+    // Read stdout/stderr before waiting
+    let mut stdout_buf = Vec::new();
+    let mut stderr_buf = Vec::new();
+    if let Some(mut stdout) = child.stdout.take() {
+        let _ = stdout.read_to_end(&mut stdout_buf);
+    }
+    if let Some(mut stderr) = child.stderr.take() {
+        let _ = stderr.read_to_end(&mut stderr_buf);
+    }
+
+    // Wait with resource tracking
+    let (exit_code, usage) = wait_with_rusage(pid);
+
+    if exit_code != 0 {
+        let stderr = String::from_utf8_lossy(&stderr_buf);
+        let detail = if stderr.is_empty() {
+            "no error output".to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!("claude exited with code {}: {}", exit_code, detail));
+    }
+
+    let stdout = String::from_utf8_lossy(&stdout_buf).trim().to_string();
+    if stdout.is_empty() {
+        return Err("claude returned empty output".to_string());
+    }
+
+    Ok((clean_command_output(&stdout), usage))
 }
 
-fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, String> {
-    use std::io::Write;
+fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<(String, ResourceUsage), String> {
+    use std::io::{Read, Write};
 
     let exe = Provider::Gemini.find_executable()
         .ok_or_else(|| "gemini CLI not found. Install from: https://github.com/google-gemini/gemini-cli".to_string())?;
@@ -195,33 +245,44 @@ fn generate_with_gemini(prompt: &str, model: Option<&str>) -> Result<String, Str
         .spawn()
         .map_err(|e| format!("Failed to run gemini: {}", e))?;
 
+    let pid = child.id() as i32;
+
     if let Some(mut stdin) = child.stdin.take() {
         let _ = stdin.write_all(prompt.as_bytes());
     }
 
-    let output = child.wait_with_output()
-        .map_err(|e| format!("Failed to wait for gemini: {}", e))?;
+    // Read stdout/stderr before waiting
+    let mut stdout_buf = Vec::new();
+    let mut stderr_buf = Vec::new();
+    if let Some(mut stdout) = child.stdout.take() {
+        let _ = stdout.read_to_end(&mut stdout_buf);
+    }
+    if let Some(mut stderr) = child.stderr.take() {
+        let _ = stderr.read_to_end(&mut stderr_buf);
+    }
 
-    if !output.status.success() {
-        let code = output.status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
-        let stderr = String::from_utf8_lossy(&output.stderr);
+    // Wait with resource tracking
+    let (exit_code, usage) = wait_with_rusage(pid);
+
+    if exit_code != 0 {
+        let stderr = String::from_utf8_lossy(&stderr_buf);
         let detail = if stderr.is_empty() {
             "no error output".to_string()
         } else {
             stderr.trim().to_string()
         };
-        return Err(format!("gemini exited with code {}: {}", code, detail));
+        return Err(format!("gemini exited with code {}: {}", exit_code, detail));
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stdout = String::from_utf8_lossy(&stdout_buf).trim().to_string();
     if stdout.is_empty() {
         return Err("gemini returned empty output".to_string());
     }
 
-    Ok(clean_command_output(&stdout))
+    Ok((clean_command_output(&stdout), usage))
 }
 
-fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, String> {
+fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<(String, ResourceUsage), String> {
     let exe = Provider::OpenAI.find_executable()
         .ok_or_else(|| "codex CLI not found. Install from: https://github.com/openai/codex".to_string())?;
 
@@ -243,56 +304,35 @@ fn generate_with_openai(prompt: &str, model: Option<&str>) -> Result<String, Str
     }
     cmd.stdout(std::process::Stdio::null());
 
-    let status = cmd
+    let child = cmd
         .stdin(std::process::Stdio::null())
-        .status()
+        .spawn()
         .map_err(|e| format!("Failed to run codex: {}", e))?;
+
+    let pid = child.id() as i32;
+
+    // Wait with resource tracking
+    let (exit_code, usage) = wait_with_rusage(pid);
 
     let output = std::fs::read_to_string(&tmp_file).unwrap_or_default();
     let stderr = std::fs::read_to_string(&err_file).unwrap_or_default();
     let _ = std::fs::remove_file(&tmp_file);
     let _ = std::fs::remove_file(&err_file);
 
-    if !status.success() {
-        let code = status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
+    if exit_code != 0 {
         let detail = if stderr.is_empty() {
             "no error output".to_string()
         } else {
             stderr.trim().to_string()
         };
-        return Err(format!("codex exited with code {}: {}", code, detail));
+        return Err(format!("codex exited with code {}: {}", exit_code, detail));
     }
 
     if output.is_empty() {
         return Err("codex returned empty output".to_string());
     }
 
-    Ok(clean_command_output(&output))
-}
-
-fn run_command_with_stderr(mut cmd: Command, name: &str) -> Result<String, String> {
-    let output = cmd
-        .stdin(std::process::Stdio::null())
-        .output()
-        .map_err(|e| format!("Failed to run {}: {}", name, e))?;
-
-    if !output.status.success() {
-        let code = output.status.code().map(|c| c.to_string()).unwrap_or("unknown".into());
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let detail = if stderr.is_empty() {
-            "no error output".to_string()
-        } else {
-            stderr.trim().to_string()
-        };
-        return Err(format!("{} exited with code {}: {}", name, code, detail));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if stdout.is_empty() {
-        return Err(format!("{} returned empty output", name));
-    }
-
-    Ok(clean_command_output(&stdout))
+    Ok((clean_command_output(&output), usage))
 }
 
 fn clean_command_output(output: &str) -> String {
@@ -329,4 +369,38 @@ fn clean_command_output(output: &str) -> String {
     }
 
     trimmed.to_string()
+}
+
+/// Wait for a child process and collect resource usage via wait4
+fn wait_with_rusage(pid: i32) -> (i32, ResourceUsage) {
+    use std::mem::MaybeUninit;
+
+    let mut status: i32 = 0;
+    let mut rusage = MaybeUninit::<libc::rusage>::uninit();
+
+    // Wait for the specific child and get resource usage
+    unsafe {
+        libc::wait4(pid, &mut status, 0, rusage.as_mut_ptr());
+    }
+
+    let rusage = unsafe { rusage.assume_init() };
+
+    // Convert timeval to microseconds
+    let user_time_us = (rusage.ru_utime.tv_sec as u64) * 1_000_000 + (rusage.ru_utime.tv_usec as u64);
+    let system_time_us = (rusage.ru_stime.tv_sec as u64) * 1_000_000 + (rusage.ru_stime.tv_usec as u64);
+
+    // ru_maxrss is in kilobytes on Linux
+    let max_rss_kb = rusage.ru_maxrss as u64;
+
+    let exit_code = if libc::WIFEXITED(status) {
+        libc::WEXITSTATUS(status)
+    } else {
+        -1
+    };
+
+    (exit_code, ResourceUsage {
+        user_time_us,
+        system_time_us,
+        max_rss_kb,
+    })
 }

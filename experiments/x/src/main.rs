@@ -152,10 +152,10 @@ fn main() {
             Some(Spinner::new(&model_display))
         };
 
-        let (command, duration_ms) = match generate_command(provider, model_ref, &full_request, &context) {
-            Ok(cmd) => {
+        let (command, duration_ms, usage) = match generate_command(provider, model_ref, &full_request, &context) {
+            Ok((cmd, resource_usage)) => {
                 let duration = spinner.map(|s| s.stop()).unwrap_or_default();
-                (cmd, duration.as_millis() as u64)
+                (cmd, duration.as_millis() as u64, resource_usage)
             }
             Err(e) => {
                 if let Some(s) = spinner {
@@ -181,6 +181,9 @@ fn main() {
                     provider: provider.display_name().to_string(),
                     model: model_ref.map(|s| s.to_string()),
                     duration_ms,
+                    user_time_us: usage.user_time_us,
+                    system_time_us: usage.system_time_us,
+                    max_rss_kb: usage.max_rss_kb,
                     command: command.clone(),
                     outcome,
                     edited_command: edited.map(|s| s.to_string()),
@@ -229,6 +232,9 @@ fn main() {
                         provider: provider.display_name().to_string(),
                         model: model_ref.map(|s| s.to_string()),
                         duration_ms,
+                        user_time_us: usage.user_time_us,
+                        system_time_us: usage.system_time_us,
+                        max_rss_kb: usage.max_rss_kb,
                         command: command.clone(),
                         outcome: Outcome::Refined,
                         edited_command: None,

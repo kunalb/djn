@@ -28,6 +28,9 @@ pub struct HistoryEntry {
     pub provider: String,
     pub model: Option<String>,
     pub duration_ms: u64,
+    pub user_time_us: u64,
+    pub system_time_us: u64,
+    pub max_rss_kb: u64,
     pub command: String,
     pub outcome: Outcome,
     pub edited_command: Option<String>,
@@ -71,8 +74,11 @@ impl History {
                 provider TEXT NOT NULL,
                 model TEXT,
 
-                -- Timing
+                -- Timing and resource usage
                 duration_ms INTEGER NOT NULL,
+                user_time_us INTEGER NOT NULL DEFAULT 0,
+                system_time_us INTEGER NOT NULL DEFAULT 0,
+                max_rss_kb INTEGER NOT NULL DEFAULT 0,
 
                 -- Result
                 command TEXT NOT NULL,
@@ -102,15 +108,19 @@ impl History {
         self.db
             .execute(
                 "INSERT INTO generations (
-                    cwd, request, provider, model, duration_ms, command,
-                    outcome, edited_command, session_id, refinement_of, exit_code
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                    cwd, request, provider, model, duration_ms,
+                    user_time_us, system_time_us, max_rss_kb,
+                    command, outcome, edited_command, session_id, refinement_of, exit_code
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
                 params![
                     entry.cwd,
                     entry.request,
                     entry.provider,
                     entry.model,
                     entry.duration_ms,
+                    entry.user_time_us,
+                    entry.system_time_us,
+                    entry.max_rss_kb,
                     entry.command,
                     entry.outcome.as_str(),
                     entry.edited_command,
