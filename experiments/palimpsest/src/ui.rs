@@ -93,7 +93,7 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
         let header = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!(" {} (i: collapse, j/k: select, Enter: open) ", app.file_path.display()))
+                .title(format!(" {} (i: collapse, Tab: next file, Enter: open) ", app.file_path.display()))
                 .title_style(Style::default().add_modifier(Modifier::BOLD)),
         );
 

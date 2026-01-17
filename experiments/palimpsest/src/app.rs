@@ -438,4 +438,29 @@ impl App {
         Some(self.repo.workdir().join(selected))
     }
 
+    /// Switch to viewing a different file
+    pub fn switch_to_file(&mut self, file_path: PathBuf) -> Result<()> {
+        let commits = self.repo.get_file_history(&file_path)?;
+
+        if commits.is_empty() {
+            anyhow::bail!("No commits found for file: {}", file_path.display());
+        }
+
+        let extension = Highlighter::get_extension(&file_path);
+
+        self.file_path = file_path;
+        self.extension = extension;
+        self.commits = commits;
+        self.current_index = 0;
+        self.scroll_offset = 0;
+        self.focused_line = 0;
+        self.collapsed_mode = false;
+        self.expanded_sections.clear();
+        self.show_commit_details = false;
+        self.details_selected_file = 0;
+        self.content_cache.clear();
+        self.highlight_cache.clear();
+
+        Ok(())
+    }
 }
