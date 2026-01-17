@@ -223,6 +223,77 @@ strip = true       # Strip symbols
 panic = "abort"    # Smaller panic handling
 ```
 
+## Performance Analysis
+
+### CLI Startup Overhead (January 2026)
+
+Benchmarking the three supported CLIs reveals significant differences in startup time:
+
+| CLI | Implementation | Total Time | Startup Overhead | API Latency |
+|-----|---------------|------------|------------------|-------------|
+| **Codex** | Native Rust binary (static-pie) | ~0.8s | ~0.1s | ~0.7s |
+| **Claude** | Node.js | ~4.0s | ~3.85s (96%) | ~0.15s |
+| **Gemini** | Node.js | ~8.5s | ~7s+ (80%+) | ~1.5s |
+
+### Key Findings
+
+**Codex is fast because it's a native binary:**
+```
+$ file .../codex
+ELF 64-bit LSB pie executable, x86-64, static-pie linked, stripped
+```
+
+The npm package includes pre-compiled Rust binaries for each platform. The Node.js wrapper (`codex.js`) simply spawns the native binary.
+
+**Claude and Gemini are slow due to Node.js module loading:**
+
+Using `strace -tt` to trace Claude CLI:
+```
+02:10:57.099  execve("claude", ...)     # Process starts
+02:11:00.952  connect(..., port 443)    # First API call
+```
+
+~3.85 seconds of the ~4 second total is spent loading Node.js modules before any API call is made.
+
+### Resource Tracking
+
+The history database captures per-invocation metrics via `wait4()` syscall:
+
+- `duration_ms` - Wall clock time
+- `user_time_us` - User CPU time in microseconds
+- `system_time_us` - System CPU time in microseconds
+- `max_rss_kb` - Maximum resident set size in kilobytes
+
+Query example:
+```sql
+SELECT provider,
+       AVG(duration_ms) as avg_wall_ms,
+       AVG(user_time_us/1000) as avg_user_ms,
+       AVG(max_rss_kb/1024) as avg_rss_mb
+FROM generations
+GROUP BY provider;
+```
+
+### Protocol Support
+
+Each CLI has different server/protocol capabilities:
+
+| CLI | MCP Server | ACP Support | Notes |
+|-----|-----------|-------------|-------|
+| Claude | `--mcp-config` | Not yet | Can consume MCP servers |
+| Gemini | `gemini mcp` | `--experimental-acp` | ACP flag available |
+| Codex | `codex mcp-server` | Not yet | Can run as MCP server |
+
+### Optimization Opportunities
+
+1. **Keep Node.js warm** - A daemon could keep Claude/Gemini's Node.js runtime loaded, reducing startup from ~4-8s to <1s
+
+2. **Use ACP/MCP protocols** - Instead of spawning new processes, communicate with a persistent agent server
+
+3. **Default to Codex** - For latency-sensitive use cases, Codex's native binary is 5-10x faster
+
+4. **Lazy provider loading** - Only import the selected provider's module
+
 ## Future Considerations
 
 Potential enhancements not yet implemented:
@@ -232,3 +303,4 @@ Potential enhancements not yet implemented:
 - **Streaming output** - Show command as it generates
 - **Multi-command sessions** - Conversational mode
 - **Safety checks** - Warn about destructive commands
+- **ACP integration** - Use Agent Control Protocol for persistent connections
