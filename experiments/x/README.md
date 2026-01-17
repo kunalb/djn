@@ -6,7 +6,7 @@ A fast, minimal terminal utility that uses LLMs to generate shell commands from 
 
 ```
 $ x create a new directory called projects and initialize a git repo in it
-┌ gemini/2.5-flash (1.2s)
+┌ codex (1.2s)
 │ mkdir projects && cd projects && git init
 └ [Y/n/e/...] y
 
@@ -83,22 +83,22 @@ x --config
 This opens `~/.config/x/config.toml` in your editor:
 
 ```toml
-# Default provider: gemini, claude, or codex
-default_provider = "gemini"
+# Default provider: codex, claude, or gemini
+default_provider = "codex"
 
-[gemini]
-# model = "gemini-2.5-flash"    # fast (default)
-# model = "gemini-2.5-pro"      # powerful
+[openai]
+# model = "gpt-5-codex"         # default
+# model = "gpt-5.2-codex"       # latest, most advanced
+# model = "gpt-5-codex-mini"    # faster
 
 [claude]
 # model = "sonnet"              # alias for latest sonnet (default)
 # model = "opus"                # alias for latest opus
 # model = "haiku"               # alias for latest haiku (fast)
 
-[openai]
-# model = "gpt-5-codex"         # default
-# model = "gpt-5.2-codex"       # latest, most advanced
-# model = "gpt-5-codex-mini"    # faster
+[gemini]
+# model = "gemini-2.5-flash"    # fast (default)
+# model = "gemini-2.5-pro"      # powerful
 ```
 
 ## Usage
@@ -125,7 +125,7 @@ x [OPTIONS] <REQUEST>...
 When a command is generated, you'll see:
 
 ```
-┌ gemini/2.5-flash (1.2s)
+┌ codex (1.2s)
 │ ls -la
 └ [Y/n/e/...]
 ```
@@ -139,10 +139,10 @@ When a command is generated, you'll see:
 
 ```
 $ x list files
-┌ gemini/2.5-flash (0.8s)
+┌ codex (0.8s)
 │ ls
 └ [Y/n/e/...] sort by size, largest first
-┌ gemini/2.5-flash (0.6s)
+┌ codex (0.6s)
 │ ls -lhS
 └ [Y/n/e/...] y
 
@@ -205,7 +205,7 @@ If a command fails, just ask to fix it:
 $ gcc main.c
 main.c:10: error: expected ';' before '}'
 $ x fix it
-┌ gemini/2.5-flash (0.9s)
+┌ codex (0.9s)
 │ gcc main.c -fsyntax-only  # or suggests the actual fix
 ```
 
@@ -223,7 +223,7 @@ When piping data to `x`, it detects stdin and generates commands that read from 
 
 ```bash
 $ cat data.json | x extract the user ids
-┌ gemini/2.5-flash (0.8s)
+┌ codex (0.8s)
 │ jq '.users[].id'
 ```
 

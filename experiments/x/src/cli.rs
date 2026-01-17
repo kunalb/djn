@@ -31,10 +31,10 @@ Interactive prompt:
 
   Example refinement:
     $ x list files
-    ┌ gemini/2.5-flash (1.2s)
+    ┌ codex (1.2s)
     │ ls
     └ [Y/n/e/...] sort by size, largest first
-    ┌ gemini/2.5-flash (0.8s)
+    ┌ codex (0.8s)
     │ ls -lhS
     └ [Y/n/e/...] y
 

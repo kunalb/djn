@@ -178,16 +178,16 @@ Errors include:
 Config file: `~/.config/x/config.toml` (XDG compliant)
 
 ```toml
-default_provider = "gemini"
+default_provider = "codex"
 
-[gemini]
-model = "gemini-2.5-flash"
+[openai]
+model = "gpt-5-codex"
 
 [claude]
 model = "sonnet"
 
-[openai]
-model = "gpt-4o"
+[gemini]
+model = "gemini-2.5-flash"
 ```
 
 The `--config` flag creates a template if missing and opens in `$EDITOR`.

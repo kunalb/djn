@@ -23,7 +23,7 @@ pub struct ProviderConfig {
 }
 
 fn default_provider() -> String {
-    "gemini".to_string()
+    "codex".to_string()
 }
 
 impl Default for Config {
@@ -106,22 +106,22 @@ impl Config {
 
     fn template() -> &'static str {
         r#"# x configuration
-# Default provider: gemini, claude, or codex
-default_provider = "gemini"
+# Default provider: codex, claude, or gemini
+default_provider = "codex"
 
-[gemini]
-# model = "gemini-2.5-flash"    # fast (default)
-# model = "gemini-2.5-pro"      # powerful
+[openai]
+# model = "gpt-5-codex"         # default
+# model = "gpt-5.2-codex"       # latest, most advanced
+# model = "gpt-5-codex-mini"    # faster
 
 [claude]
 # model = "sonnet"              # alias for latest sonnet (default)
 # model = "opus"                # alias for latest opus
 # model = "haiku"               # alias for latest haiku (fast)
 
-[openai]
-# model = "gpt-5-codex"         # default
-# model = "gpt-5.2-codex"       # latest, most advanced
-# model = "gpt-5-codex-mini"    # faster
+[gemini]
+# model = "gemini-2.5-flash"    # fast (default)
+# model = "gemini-2.5-pro"      # powerful
 "#
     }
 }
