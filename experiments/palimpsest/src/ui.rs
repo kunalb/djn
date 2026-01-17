@@ -302,7 +302,7 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let footer_text = format!(
-        "{}| {} | j/k: focus | n/N: next/prev change | q: quit",
+        "{}| {} | j/k: focus | n/N: change | b/B: blame/before | q: quit",
         position, nav_hint
     );
 

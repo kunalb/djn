@@ -1,6 +1,6 @@
 use crate::git::{build_side_by_side, compute_diff, Commit, DiffLine, GitRepo, SideBySideRow};
 use crate::highlight::Highlighter;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ratatui::style::Style;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -220,5 +220,80 @@ impl App {
 
     pub fn position_from_end(&self) -> usize {
         self.commits.len() - self.current_index
+    }
+
+    /// Get the line number in the current file for the focused row
+    /// Returns (line_num, is_current_side) - line_num is 1-indexed
+    /// is_current_side indicates if we should look at the current (right) or previous (left) version
+    pub fn get_focused_line_num(&mut self) -> Option<(usize, bool)> {
+        if let Some(rows) = self.get_side_by_side() {
+            if let Some(row) = rows.get(self.focused_line) {
+                // Prefer the right side (current version) if available
+                if let Some(line_num) = row.right_line_num {
+                    return Some((line_num, true));
+                }
+                // Fall back to left side (previous version)
+                if let Some(line_num) = row.left_line_num {
+                    return Some((line_num, false));
+                }
+            }
+        }
+        // For content view (oldest commit), use focused_line + 1
+        Some((self.focused_line + 1, true))
+    }
+
+    /// Jump to the commit that introduced the currently focused line
+    pub fn jump_to_line_origin(&mut self, view_height: usize) -> Result<bool> {
+        let (line_num, is_current) = self.get_focused_line_num().context("No line focused")?;
+
+        // Determine which commit/file to blame from
+        let (hash, path) = if is_current || self.current_index >= self.commits.len() - 1 {
+            let c = &self.commits[self.current_index];
+            (c.hash.clone(), c.file_path.clone())
+        } else {
+            let c = &self.commits[self.current_index + 1];
+            (c.hash.clone(), c.file_path.clone())
+        };
+
+        let origin_hash = self.repo.blame_line(&hash, &path, line_num)?;
+
+        // Find this commit in our history
+        if let Some(idx) = self.commits.iter().position(|c| c.hash == origin_hash) {
+            self.current_index = idx;
+            self.focused_line = 0;
+            self.scroll_offset = 0;
+            self.center_on_focused(view_height);
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    /// Jump to the commit before the one that introduced the currently focused line
+    pub fn jump_to_before_line_origin(&mut self, view_height: usize) -> Result<bool> {
+        let (line_num, is_current) = self.get_focused_line_num().context("No line focused")?;
+
+        let (hash, path) = if is_current || self.current_index >= self.commits.len() - 1 {
+            let c = &self.commits[self.current_index];
+            (c.hash.clone(), c.file_path.clone())
+        } else {
+            let c = &self.commits[self.current_index + 1];
+            (c.hash.clone(), c.file_path.clone())
+        };
+
+        let origin_hash = self.repo.blame_line(&hash, &path, line_num)?;
+
+        // Find this commit in our history and go to the one after it (older)
+        if let Some(idx) = self.commits.iter().position(|c| c.hash == origin_hash) {
+            if idx + 1 < self.commits.len() {
+                self.current_index = idx + 1;
+                self.focused_line = 0;
+                self.scroll_offset = 0;
+                self.center_on_focused(view_height);
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }

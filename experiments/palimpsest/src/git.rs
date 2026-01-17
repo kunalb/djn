@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use git2::{DiffOptions, Repository};
+use git2::{BlameOptions, DiffOptions, Repository};
 use std::path::Path;
 
 #[derive(Clone, Debug)]
@@ -150,6 +150,22 @@ impl GitRepo {
             .to_string();
 
         Ok(content)
+    }
+
+    /// Get the commit hash that introduced a specific line at a given commit
+    pub fn blame_line(&self, commit_hash: &str, file_path: &str, line_num: usize) -> Result<String> {
+        let oid = git2::Oid::from_str(commit_hash)?;
+
+        let mut opts = BlameOptions::new();
+        opts.newest_commit(oid);
+
+        let blame = self.repo.blame_file(Path::new(file_path), Some(&mut opts))?;
+
+        let hunk = blame
+            .get_line(line_num)
+            .context("Line not found in blame")?;
+
+        Ok(hunk.final_commit_id().to_string())
     }
 }
 

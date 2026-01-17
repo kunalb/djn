@@ -109,6 +109,14 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                         // Go to end - we'd need to know total lines, approximate for now
                         app.focused_line = usize::MAX / 2;
                     }
+                    KeyCode::Char('b') => {
+                        // Jump to commit that introduced this line (blame)
+                        let _ = app.jump_to_line_origin(view_height);
+                    }
+                    KeyCode::Char('B') => {
+                        // Jump to commit before the one that introduced this line
+                        let _ = app.jump_to_before_line_origin(view_height);
+                    }
                     _ => {}
                 }
             }
