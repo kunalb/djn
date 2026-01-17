@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "cargo build 2>&1 || true",
+        "onOutput": "Fix any cargo warnings or errors shown above before continuing."
+      }
+    ]
+  }
+}
