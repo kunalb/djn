@@ -163,9 +163,17 @@ fn draw_collapsed_diff_view(
                     left_num_style = left_num_style.bg(DELETE_BG);
                 }
 
+                // Diff sign for accessibility (- for deletions)
+                let left_sign = match row.left_tag {
+                    Some(DiffTag::Delete) => Span::styled("-", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                    _ => Span::raw(" "),
+                };
+
                 let mut left_spans = vec![
                     Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
-                    Span::styled(format!("{} ", left_line_num), left_num_style),
+                    Span::styled(format!("{}", left_line_num), left_num_style),
+                    left_sign,
+                    Span::raw(" "),
                 ];
 
                 if let Some(line_num) = row.left_line_num {
@@ -202,8 +210,16 @@ fn draw_collapsed_diff_view(
                     right_num_style = right_num_style.bg(INSERT_BG);
                 }
 
+                // Diff sign for accessibility (+ for insertions)
+                let right_sign = match row.right_tag {
+                    Some(DiffTag::Insert) => Span::styled("+", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    _ => Span::raw(" "),
+                };
+
                 let mut right_spans = vec![
-                    Span::styled(format!("{} ", right_line_num), right_num_style),
+                    Span::styled(format!("{}", right_line_num), right_num_style),
+                    right_sign,
+                    Span::raw(" "),
                 ];
 
                 if let Some(line_num) = row.right_line_num {
@@ -229,7 +245,7 @@ fn draw_collapsed_diff_view(
                     Style::default().fg(Color::DarkGray)
                 };
 
-                let collapse_text = format!("··· {} lines hidden (press Enter to expand) ···", hidden_count);
+                let collapse_text = format!("··· {} lines hidden (Tab to expand) ···", hidden_count);
 
                 let left_spans = vec![
                     Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
@@ -331,9 +347,17 @@ fn draw_diff_view(
             left_num_style = left_num_style.bg(DELETE_BG);
         }
 
+        // Diff sign for accessibility (- for deletions)
+        let left_sign = match row.left_tag {
+            Some(DiffTag::Delete) => Span::styled("-", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            _ => Span::raw(" "),
+        };
+
         let mut left_spans = vec![
             Span::styled(focus_indicator, Style::default().fg(Color::Yellow)),
-            Span::styled(format!("{} ", left_line_num), left_num_style),
+            Span::styled(format!("{}", left_line_num), left_num_style),
+            left_sign,
+            Span::raw(" "),
         ];
 
         if let Some(line_num) = row.left_line_num {
@@ -372,8 +396,16 @@ fn draw_diff_view(
             right_num_style = right_num_style.bg(INSERT_BG);
         }
 
+        // Diff sign for accessibility (+ for insertions)
+        let right_sign = match row.right_tag {
+            Some(DiffTag::Insert) => Span::styled("+", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            _ => Span::raw(" "),
+        };
+
         let mut right_spans = vec![
-            Span::styled(format!("{} ", right_line_num), right_num_style),
+            Span::styled(format!("{}", right_line_num), right_num_style),
+            right_sign,
+            Span::raw(" "),
         ];
 
         if let Some(line_num) = row.right_line_num {
@@ -483,7 +515,7 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let collapse_hint = if app.collapsed_mode {
-        "c: expand all | Enter: expand"
+        "c: expand all | Tab: expand"
     } else {
         "c: collapse"
     };

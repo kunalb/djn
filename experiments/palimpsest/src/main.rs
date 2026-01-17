@@ -121,7 +121,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                         // Toggle collapsed mode
                         app.toggle_collapsed_mode();
                     }
-                    KeyCode::Enter => {
+                    KeyCode::Tab => {
                         // Expand collapsed section at focus
                         app.expand_at_focus();
                     }
