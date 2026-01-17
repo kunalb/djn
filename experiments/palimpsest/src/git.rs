@@ -28,6 +28,10 @@ impl GitRepo {
         Ok(Self { repo, workdir })
     }
 
+    pub fn workdir(&self) -> &Path {
+        &self.workdir
+    }
+
     pub fn relative_path(&self, abs_path: &Path) -> Result<std::path::PathBuf> {
         abs_path
             .strip_prefix(&self.workdir)
@@ -166,6 +170,43 @@ impl GitRepo {
             .context("Line not found in blame")?;
 
         Ok(hunk.final_commit_id().to_string())
+    }
+
+    /// Get the full commit message for a commit
+    pub fn get_full_message(&self, commit_hash: &str) -> Result<String> {
+        let oid = git2::Oid::from_str(commit_hash)?;
+        let commit = self.repo.find_commit(oid)?;
+        Ok(commit.message().unwrap_or("").to_string())
+    }
+
+    /// Get list of files changed in a commit
+    pub fn get_commit_files(&self, commit_hash: &str) -> Result<Vec<String>> {
+        let oid = git2::Oid::from_str(commit_hash)?;
+        let commit = self.repo.find_commit(oid)?;
+        let tree = commit.tree()?;
+
+        let parent_tree = if commit.parent_count() > 0 {
+            Some(commit.parent(0)?.tree()?)
+        } else {
+            None
+        };
+
+        let diff = self.repo.diff_tree_to_tree(
+            parent_tree.as_ref(),
+            Some(&tree),
+            None,
+        )?;
+
+        let mut files = Vec::new();
+        for delta in diff.deltas() {
+            if let Some(path) = delta.new_file().path() {
+                files.push(path.to_string_lossy().to_string());
+            } else if let Some(path) = delta.old_file().path() {
+                files.push(path.to_string_lossy().to_string());
+            }
+        }
+
+        Ok(files)
     }
 }
 

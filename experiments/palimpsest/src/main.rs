@@ -69,63 +69,94 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                     continue;
                 }
 
-                match key.code {
-                    KeyCode::Char('q') => {
-                        app.should_quit = true;
-                    }
-                    KeyCode::Left | KeyCode::Char('h') => {
-                        app.go_back();
-                    }
-                    KeyCode::Right | KeyCode::Char('l') => {
-                        app.go_forward();
-                    }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        app.focus_down(view_height);
-                    }
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        app.focus_up(view_height);
-                    }
-                    KeyCode::Char('n') => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            app.jump_to_prev_change(view_height);
-                        } else {
-                            app.jump_to_next_change(view_height);
+                // Handle commit details popup mode
+                if app.show_commit_details {
+                    match key.code {
+                        KeyCode::Char('q') => {
+                            app.should_quit = true;
                         }
+                        KeyCode::Char('i') | KeyCode::Esc => {
+                            app.toggle_commit_details();
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.details_select_next();
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            app.details_select_prev();
+                        }
+                        KeyCode::Enter => {
+                            // Open selected file in new instance
+                            if let Some(file_path) = app.get_selected_file_path() {
+                                if file_path.exists() {
+                                    // Return the file path to open
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        _ => {}
                     }
-                    KeyCode::Char('N') => {
-                        app.jump_to_prev_change(view_height);
+                } else {
+                    match key.code {
+                        KeyCode::Char('q') => {
+                            app.should_quit = true;
+                        }
+                        KeyCode::Char('i') => {
+                            app.toggle_commit_details();
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            app.go_back();
+                        }
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            app.go_forward();
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.focus_down(view_height);
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            app.focus_up(view_height);
+                        }
+                        KeyCode::Char('n') => {
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                app.jump_to_prev_change(view_height);
+                            } else {
+                                app.jump_to_next_change(view_height);
+                            }
+                        }
+                        KeyCode::Char('N') => {
+                            app.jump_to_prev_change(view_height);
+                        }
+                        KeyCode::PageDown | KeyCode::Char(' ') => {
+                            app.page_down(view_height);
+                        }
+                        KeyCode::PageUp => {
+                            app.page_up(view_height);
+                        }
+                        KeyCode::Home | KeyCode::Char('g') => {
+                            app.focused_line = 0;
+                            app.scroll_offset = 0;
+                        }
+                        KeyCode::Char('G') => {
+                            // Go to end - we'd need to know total lines, approximate for now
+                            app.focused_line = usize::MAX / 2;
+                        }
+                        KeyCode::Char('b') => {
+                            // Jump to commit that introduced this line (blame)
+                            let _ = app.jump_to_line_origin(view_height);
+                        }
+                        KeyCode::Char('B') => {
+                            // Jump to commit before the one that introduced this line
+                            let _ = app.jump_to_before_line_origin(view_height);
+                        }
+                        KeyCode::Char('c') => {
+                            // Toggle collapsed mode
+                            app.toggle_collapsed_mode();
+                        }
+                        KeyCode::Tab => {
+                            // Expand collapsed section at focus
+                            app.expand_at_focus();
+                        }
+                        _ => {}
                     }
-                    KeyCode::PageDown | KeyCode::Char(' ') => {
-                        app.page_down(view_height);
-                    }
-                    KeyCode::PageUp => {
-                        app.page_up(view_height);
-                    }
-                    KeyCode::Home | KeyCode::Char('g') => {
-                        app.focused_line = 0;
-                        app.scroll_offset = 0;
-                    }
-                    KeyCode::Char('G') => {
-                        // Go to end - we'd need to know total lines, approximate for now
-                        app.focused_line = usize::MAX / 2;
-                    }
-                    KeyCode::Char('b') => {
-                        // Jump to commit that introduced this line (blame)
-                        let _ = app.jump_to_line_origin(view_height);
-                    }
-                    KeyCode::Char('B') => {
-                        // Jump to commit before the one that introduced this line
-                        let _ = app.jump_to_before_line_origin(view_height);
-                    }
-                    KeyCode::Char('c') => {
-                        // Toggle collapsed mode
-                        app.toggle_collapsed_mode();
-                    }
-                    KeyCode::Tab => {
-                        // Expand collapsed section at focus
-                        app.expand_at_focus();
-                    }
-                    _ => {}
                 }
             }
             Event::Mouse(mouse) => {

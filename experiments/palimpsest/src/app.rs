@@ -31,6 +31,8 @@ pub struct App {
     pub should_quit: bool,
     pub collapsed_mode: bool,
     pub expanded_sections: HashSet<usize>, // start indices of expanded sections
+    pub show_commit_details: bool,
+    pub details_selected_file: usize,
     pub highlighter: Highlighter,
     content_cache: HashMap<String, String>,
     highlight_cache: HashMap<String, Vec<HighlightedLine>>,
@@ -58,6 +60,8 @@ impl App {
             should_quit: false,
             collapsed_mode: false,
             expanded_sections: HashSet::new(),
+            show_commit_details: false,
+            details_selected_file: 0,
             highlighter: Highlighter::new(),
             content_cache: HashMap::new(),
             highlight_cache: HashMap::new(),
@@ -395,4 +399,43 @@ impl App {
 
         Ok(false)
     }
+
+    pub fn toggle_commit_details(&mut self) {
+        self.show_commit_details = !self.show_commit_details;
+        self.details_selected_file = 0;
+    }
+
+    pub fn get_commit_details(&self) -> Option<(String, Vec<String>)> {
+        let commit = self.current_commit();
+        let message = self.repo.get_full_message(&commit.hash).ok()?;
+        let files = self.repo.get_commit_files(&commit.hash).ok()?;
+        Some((message, files))
+    }
+
+    pub fn details_select_next(&mut self) {
+        if let Some((_, files)) = self.get_commit_details() {
+            if !files.is_empty() {
+                self.details_selected_file = (self.details_selected_file + 1) % files.len();
+            }
+        }
+    }
+
+    pub fn details_select_prev(&mut self) {
+        if let Some((_, files)) = self.get_commit_details() {
+            if !files.is_empty() {
+                self.details_selected_file = self.details_selected_file
+                    .checked_sub(1)
+                    .unwrap_or(files.len() - 1);
+            }
+        }
+    }
+
+    /// Open the selected file from commit details in a new palimpsest instance
+    pub fn get_selected_file_path(&self) -> Option<PathBuf> {
+        let (_, files) = self.get_commit_details()?;
+        let selected = files.get(self.details_selected_file)?;
+        // Convert relative path to absolute
+        Some(self.repo.workdir().join(selected))
+    }
+
 }
