@@ -129,18 +129,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                         app.toggle_collapsed_mode();
                     }
                     KeyCode::Tab => {
+                        // Expand collapsed section at focus
+                        app.expand_at_focus();
+                    }
+                    KeyCode::Char('[') => {
                         if app.show_commit_details {
-                            // Navigate to next file in expanded header
-                            app.details_select_next();
-                        } else {
-                            // Expand collapsed section at focus
-                            app.expand_at_focus();
+                            app.details_select_prev();
                         }
                     }
-                    KeyCode::BackTab => {
+                    KeyCode::Char(']') => {
                         if app.show_commit_details {
-                            // Navigate to previous file in expanded header
-                            app.details_select_prev();
+                            app.details_select_next();
                         }
                     }
                     KeyCode::Enter => {
