@@ -367,9 +367,8 @@ impl App {
         // Find this commit in our history
         if let Some(idx) = self.commits.iter().position(|c| c.hash == origin_hash) {
             self.current_index = idx;
-            self.focused_line = 0;
-            self.scroll_offset = 0;
-            self.center_on_focused(view_height);
+            // Try to focus on the same line number in the new view
+            self.focus_on_line_num(line_num, is_current, view_height);
             return Ok(true);
         }
 
@@ -394,14 +393,48 @@ impl App {
         if let Some(idx) = self.commits.iter().position(|c| c.hash == origin_hash) {
             if idx + 1 < self.commits.len() {
                 self.current_index = idx + 1;
-                self.focused_line = 0;
-                self.scroll_offset = 0;
-                self.center_on_focused(view_height);
+                // Try to focus on the same line number in the new view
+                self.focus_on_line_num(line_num, is_current, view_height);
                 return Ok(true);
             }
         }
 
         Ok(false)
+    }
+
+    /// Focus on a specific line number in the current diff view
+    fn focus_on_line_num(&mut self, target_line: usize, prefer_current: bool, view_height: usize) {
+        if let Some(rows) = self.get_side_by_side() {
+            // Find the row that contains this line number
+            for (idx, row) in rows.iter().enumerate() {
+                let found = if prefer_current {
+                    row.right_line_num == Some(target_line)
+                } else {
+                    row.left_line_num == Some(target_line)
+                };
+                if found {
+                    self.focused_line = idx;
+                    self.center_on_focused(view_height);
+                    return;
+                }
+            }
+            // Fallback: try the other side
+            for (idx, row) in rows.iter().enumerate() {
+                let found = if prefer_current {
+                    row.left_line_num == Some(target_line)
+                } else {
+                    row.right_line_num == Some(target_line)
+                };
+                if found {
+                    self.focused_line = idx;
+                    self.center_on_focused(view_height);
+                    return;
+                }
+            }
+        }
+        // If we can't find the line, just reset to top
+        self.focused_line = 0;
+        self.scroll_offset = 0;
     }
 
     pub fn toggle_commit_details(&mut self) {
