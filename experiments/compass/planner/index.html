@@ -509,6 +509,552 @@
       transform: translate(-50%, -50%);
     }
 
+    /* Tags */
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 2px;
+      font-size: 10px;
+      font-weight: 400;
+      color: #000;
+    }
+
+    .tag-input-wrapper {
+      position: relative;
+    }
+
+    .tag-input-wrapper input {
+      width: 100%;
+    }
+
+    .tag-suggestions {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #000;
+      border: 1px solid #404040;
+      border-top: none;
+      border-radius: 0 0 2px 2px;
+      max-height: 120px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .tag-suggestions.visible {
+      display: block;
+    }
+
+    .tag-suggestion {
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .tag-suggestion:hover {
+      background: #252525;
+    }
+
+    .tag-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .tag-preview .tag {
+      cursor: pointer;
+    }
+
+    .tag-preview .tag:hover {
+      opacity: 0.7;
+    }
+
+    /* View toggle buttons */
+    .view-toggle {
+      display: flex;
+      gap: 0;
+      border: 1px solid #404040;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .view-toggle button {
+      border: none;
+      border-radius: 0;
+      border-right: 1px solid #404040;
+      padding: 5px 10px;
+    }
+
+    .view-toggle button:last-child {
+      border-right: none;
+    }
+
+    .view-toggle button.active {
+      background: #a9f9dd;
+      color: #000;
+    }
+
+    /* Filter panel */
+    .filter-panel {
+      background: #000;
+      border-bottom: 1px solid #404040;
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s, padding 0.2s;
+    }
+
+    .filter-panel.open {
+      max-height: 200px;
+      padding: 12px 20px;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      font-size: 11px;
+      color: #808080;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      background: #1a1a1a;
+      color: #e7e7e7;
+      border: 1px solid #404040;
+      padding: 4px 8px;
+      border-radius: 2px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .filter-group input[type="text"] {
+      width: 150px;
+    }
+
+    .filter-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 10px;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .filter-tag.selected {
+      outline: 2px solid #e7e7e7;
+      outline-offset: 1px;
+    }
+
+    .filter-tag .remove {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    .filter-tag .remove:hover {
+      opacity: 1;
+    }
+
+    .filter-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .active-filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: #000;
+      border-bottom: 1px solid #404040;
+      font-size: 11px;
+      color: #808080;
+    }
+
+    .active-filters.hidden {
+      display: none;
+    }
+
+    .active-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: #252525;
+      border-radius: 2px;
+      color: #e7e7e7;
+    }
+
+    .active-filter-chip button {
+      padding: 0 2px;
+      background: transparent;
+      border: none;
+      color: #808080;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .active-filter-chip button:hover {
+      color: #e7e7e7;
+    }
+
+    /* Sort controls */
+    .sort-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sort-group select {
+      min-width: 100px;
+    }
+
+    .sort-direction-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      min-width: 24px;
+    }
+
+    /* Table View */
+    .table-view {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .table-view th,
+    .table-view td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #404040;
+    }
+
+    .table-view th {
+      background: #000;
+      font-weight: 400;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #808080;
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .table-view th:hover {
+      color: #e7e7e7;
+    }
+
+    .table-view th.sorted {
+      color: #a9f9dd;
+    }
+
+    .table-view th .sort-indicator {
+      margin-left: 4px;
+      font-size: 10px;
+    }
+
+    .table-view tr {
+      background: #1a1a1a;
+    }
+
+    .table-view tr:hover {
+      background: #252525;
+    }
+
+    .table-view td.title-cell {
+      max-width: 300px;
+    }
+
+    .table-view td.title-cell .title-text {
+      display: block;
+      word-break: break-word;
+    }
+
+    .table-view td.tags-cell .tag {
+      margin-right: 4px;
+      margin-bottom: 2px;
+    }
+
+    .table-view td.actions-cell {
+      white-space: nowrap;
+    }
+
+    .table-view td.actions-cell button {
+      padding: 2px 6px;
+      font-size: 10px;
+      margin-right: 4px;
+    }
+
+    .table-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: #606060;
+    }
+
+    /* Calendar View */
+    .calendar-container {
+      padding: 16px;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .calendar-header h2 {
+      font-size: 14px;
+      font-weight: 400;
+      color: #e7e7e7;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-nav button {
+      padding: 4px 12px;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: #404040;
+      border: 1px solid #404040;
+      border-radius: 2px;
+    }
+
+    .calendar-day-header {
+      background: #000;
+      padding: 8px;
+      text-align: center;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #808080;
+    }
+
+    .calendar-day {
+      background: #1a1a1a;
+      min-height: 100px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .calendar-day.other-month {
+      background: #151515;
+    }
+
+    .calendar-day.other-month .day-number {
+      color: #404040;
+    }
+
+    .calendar-day.today {
+      background: #1a2520;
+    }
+
+    .calendar-day.today .day-number {
+      color: #a9f9dd;
+    }
+
+    .day-number {
+      font-size: 12px;
+      color: #808080;
+      margin-bottom: 4px;
+    }
+
+    .calendar-tasks {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .calendar-task {
+      font-size: 10px;
+      padding: 2px 4px;
+      background: #000;
+      border: 1px solid #404040;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .calendar-task:hover {
+      border-color: #606060;
+    }
+
+    .calendar-more {
+      font-size: 10px;
+      color: #606060;
+      padding: 2px 4px;
+    }
+
+    .calendar-add-btn {
+      margin-top: auto;
+      padding: 2px;
+      font-size: 10px;
+      background: transparent;
+      border: 1px dashed #404040;
+      color: #606060;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .calendar-day:hover .calendar-add-btn {
+      opacity: 1;
+    }
+
+    .calendar-add-btn:hover {
+      background: #252525;
+      color: #909090;
+    }
+
+    .calendar-unscheduled {
+      margin-top: 16px;
+      padding: 16px;
+      background: #000;
+      border: 1px solid #404040;
+      border-radius: 2px;
+    }
+
+    .calendar-unscheduled h3 {
+      font-size: 12px;
+      font-weight: 400;
+      color: #808080;
+      margin-bottom: 8px;
+    }
+
+    .calendar-unscheduled-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .calendar-unscheduled-task {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .calendar-unscheduled-task:hover {
+      border-color: #606060;
+    }
+
+    /* Saved Views Dropdown */
+    .saved-views-wrapper {
+      position: relative;
+    }
+
+    .saved-views-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      border-radius: 2px;
+      min-width: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 50;
+      display: none;
+    }
+
+    .saved-views-dropdown.visible {
+      display: block;
+    }
+
+    .saved-view-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #303030;
+    }
+
+    .saved-view-item:last-child {
+      border-bottom: none;
+    }
+
+    .saved-view-item:hover {
+      background: #252525;
+    }
+
+    .saved-view-item.active {
+      background: #1a2a20;
+    }
+
+    .saved-view-name {
+      font-size: 12px;
+      color: #e7e7e7;
+    }
+
+    .saved-view-delete {
+      padding: 2px 6px;
+      font-size: 10px;
+      background: transparent;
+      border: none;
+      color: #606060;
+      cursor: pointer;
+    }
+
+    .saved-view-delete:hover {
+      color: #e7e7e7;
+    }
+
+    .saved-views-empty {
+      padding: 12px;
+      text-align: center;
+      color: #606060;
+      font-size: 12px;
+    }
+
     /* Scrollbar styling */
     ::-webkit-scrollbar {
       width: 8px;
@@ -534,12 +1080,66 @@
     <header class="header">
       <h1>Work Planner</h1>
       <div class="header-actions">
+        <div class="view-toggle">
+          <button id="view-board" class="active" title="Board View">Board</button>
+          <button id="view-table" title="Table View">Table</button>
+          <button id="view-calendar" title="Calendar View">Calendar</button>
+        </div>
+        <button id="filter-toggle-btn">Filters</button>
+        <div class="saved-views-wrapper">
+          <button id="views-toggle-btn">Views</button>
+          <div id="saved-views-dropdown" class="saved-views-dropdown"></div>
+        </div>
         <select id="snapshot-select">
           <option value="">Current</option>
         </select>
         <button id="add-task-btn" class="primary">+ Add Task</button>
       </div>
     </header>
+
+    <div id="filter-panel" class="filter-panel">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" id="filter-search" placeholder="Search tasks...">
+        </div>
+        <div class="filter-group">
+          <label>Project</label>
+          <select id="filter-project">
+            <option value="">All Projects</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Horizon</label>
+          <select id="filter-horizon">
+            <option value="">All Horizons</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Tags</label>
+          <div id="filter-tags-container" class="filter-tags"></div>
+        </div>
+        <div class="filter-group sort-group">
+          <label>Sort</label>
+          <select id="sort-field">
+            <option value="createdAt">Created Date</option>
+            <option value="title">Title</option>
+            <option value="scheduledDate">Scheduled Date</option>
+            <option value="horizon">Horizon</option>
+          </select>
+          <button id="sort-direction-btn" class="sort-direction-btn" title="Toggle direction">↓</button>
+        </div>
+        <div class="filter-actions">
+          <button id="clear-filters-btn">Clear</button>
+          <button id="save-view-btn">Save View</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="active-filters" class="active-filters hidden">
+      <span>Active filters:</span>
+      <div id="active-filter-chips"></div>
+    </div>
 
     <div id="snapshot-banner" class="snapshot-banner hidden">
       <span>Viewing snapshot from <strong id="snapshot-date"></strong></span>
@@ -580,6 +1180,14 @@
         <label for="task-scheduled">Scheduled Date (optional)</label>
         <input type="date" id="task-scheduled">
       </div>
+      <div class="modal-field">
+        <label for="task-tags">Tags (comma-separated)</label>
+        <div class="tag-input-wrapper">
+          <input type="text" id="task-tags" placeholder="e.g. urgent, frontend, bug">
+          <div id="tag-suggestions" class="tag-suggestions"></div>
+        </div>
+        <div id="tag-preview" class="tag-preview"></div>
+      </div>
       <div class="modal-actions">
         <button id="task-cancel-btn">Cancel</button>
         <button id="task-save-btn" class="primary">Save</button>
@@ -610,6 +1218,21 @@
       <div class="modal-actions">
         <button id="confirm-cancel-btn">Cancel</button>
         <button id="confirm-ok-btn" class="primary">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save View Modal -->
+  <div id="save-view-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Save View</h2>
+      <div class="modal-field">
+        <label for="view-name">View Name</label>
+        <input type="text" id="view-name" placeholder="My Custom View">
+      </div>
+      <div class="modal-actions">
+        <button id="save-view-cancel-btn">Cancel</button>
+        <button id="save-view-save-btn" class="primary">Save</button>
       </div>
     </div>
   </div>
@@ -681,8 +1304,26 @@
     // =========================================
     let state = {
       projects: [],   // { id, name, order }
-      tasks: [],      // { id, title, projectId, horizon, scheduledDate, parentId, createdAt, history[] }
-      viewingSnapshot: null  // null means current, otherwise date string
+      tasks: [],      // { id, title, projectId, horizon, scheduledDate, parentId, tags[], createdAt, history[] }
+      viewingSnapshot: null,  // null means current, otherwise date string
+      currentView: 'board',   // 'board' | 'table' | 'calendar'
+      filters: {
+        tags: [],
+        projects: [],
+        horizons: [],
+        search: '',
+        hasChildren: null,    // null | true | false
+        hasParent: null       // null | true | false
+      },
+      sort: {
+        field: 'createdAt',   // 'createdAt' | 'title' | 'scheduledDate' | 'horizon'
+        direction: 'desc'
+      },
+      savedViews: [],
+      activeViewId: null,
+      filterPanelOpen: false,
+      calendarMonth: new Date().getMonth(),
+      calendarYear: new Date().getFullYear()
     };
 
     // =========================================
@@ -787,9 +1428,11 @@
     function loadState() {
       const projects = storage.get('projects');
       const tasks = storage.get('tasks');
+      const savedViews = storage.get('savedViews');
 
       state.projects = projects || [];
       state.tasks = tasks || [];
+      state.savedViews = savedViews || [];
     }
 
     function saveState() {
@@ -870,7 +1513,7 @@
       render();
     }
 
-    function addTask(title, projectId, horizon, scheduledDate, parentId) {
+    function addTask(title, projectId, horizon, scheduledDate, parentId, tags) {
       const now = Date.now();
       const task = {
         id: generateId(),
@@ -879,6 +1522,7 @@
         horizon,
         scheduledDate: scheduledDate || null,
         parentId: parentId || null,
+        tags: tags || [],
         createdAt: now,
         history: [{ type: 'created', timestamp: now, horizon, projectId }]
       };
@@ -938,6 +1582,13 @@
         if (updates.scheduledDate !== undefined && updates.scheduledDate !== task.scheduledDate) {
           changes.scheduledDate = { from: task.scheduledDate, to: updates.scheduledDate };
         }
+        if (updates.tags !== undefined) {
+          const oldTags = task.tags || [];
+          const newTags = updates.tags || [];
+          if (JSON.stringify(oldTags) !== JSON.stringify(newTags)) {
+            changes.tags = { from: oldTags, to: newTags };
+          }
+        }
 
         if (Object.keys(changes).length > 0) {
           addHistory(task, { type: 'edited', changes });
@@ -989,6 +1640,33 @@
         grid.classList.remove('read-only');
       }
 
+      // Update filter UI
+      updateFilterUI();
+
+      // Get filtered tasks
+      const filteredTasks = getFilteredTasks(state.tasks);
+
+      // Render based on current view
+      if (state.currentView === 'board') {
+        renderBoardView(grid, filteredTasks, isReadOnly);
+      } else if (state.currentView === 'table') {
+        renderTableView(grid, filteredTasks, isReadOnly);
+      } else if (state.currentView === 'calendar') {
+        renderCalendarView(grid, filteredTasks, isReadOnly);
+      }
+
+      // Update snapshot selector
+      updateSnapshotSelector();
+      updateSnapshotBanner();
+
+      // Update view toggle buttons
+      document.querySelectorAll('.view-toggle button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`view-${state.currentView}`).classList.add('active');
+    }
+
+    function renderBoardView(grid, filteredTasks, isReadOnly) {
       let html = '';
 
       // Header row
@@ -1015,7 +1693,7 @@
 
         // Task cells for each horizon
         for (const h of TIME_HORIZONS) {
-          const tasks = state.tasks.filter(t => t.projectId === project.id && t.horizon === h.id);
+          const tasks = filteredTasks.filter(t => t.projectId === project.id && t.horizon === h.id);
           html += `
             <div class="cell"
                  data-project-id="${project.id}"
@@ -1047,15 +1725,254 @@
       }
 
       grid.innerHTML = html;
+    }
 
-      // Update snapshot selector
-      updateSnapshotSelector();
-      updateSnapshotBanner();
+    function renderTableView(grid, filteredTasks, isReadOnly) {
+      const sortIndicator = (field) => {
+        if (state.sort.field !== field) return '';
+        return `<span class="sort-indicator">${state.sort.direction === 'asc' ? '↑' : '↓'}</span>`;
+      };
+
+      const sortedClass = (field) => state.sort.field === field ? 'sorted' : '';
+
+      if (filteredTasks.length === 0) {
+        grid.innerHTML = '<div class="table-empty">No tasks match the current filters</div>';
+        return;
+      }
+
+      let html = `
+        <table class="table-view">
+          <thead>
+            <tr>
+              <th class="${sortedClass('title')}" onclick="setSortField('title')">Title${sortIndicator('title')}</th>
+              <th>Project</th>
+              <th class="${sortedClass('horizon')}" onclick="setSortField('horizon')">Horizon${sortIndicator('horizon')}</th>
+              <th>Tags</th>
+              <th class="${sortedClass('scheduledDate')}" onclick="setSortField('scheduledDate')">Scheduled${sortIndicator('scheduledDate')}</th>
+              <th class="${sortedClass('createdAt')}" onclick="setSortField('createdAt')">Created${sortIndicator('createdAt')}</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const task of filteredTasks) {
+        const project = state.projects.find(p => p.id === task.projectId);
+        const horizon = TIME_HORIZONS.find(h => h.id === task.horizon);
+
+        const tagsHtml = task.tags && task.tags.length > 0
+          ? task.tags.map(tag =>
+              `<span class="tag" style="background: ${getTagColor(tag)}">${escapeHtml(tag)}</span>`
+            ).join('')
+          : '<span style="color: #606060;">-</span>';
+
+        const scheduledHtml = task.scheduledDate
+          ? formatShortDate(task.scheduledDate)
+          : '<span style="color: #606060;">-</span>';
+
+        const createdHtml = task.createdAt
+          ? formatTimestamp(task.createdAt)
+          : '<span style="color: #606060;">-</span>';
+
+        const actionsHtml = isReadOnly ? '' : `
+          <button onclick="showEditTaskModal('${task.id}')">Edit</button>
+          <button onclick="confirmDeleteTask('${task.id}')">×</button>
+        `;
+
+        html += `
+          <tr data-task-id="${task.id}">
+            <td class="title-cell"><span class="title-text">${escapeHtml(task.title)}</span></td>
+            <td>${project ? escapeHtml(project.name) : '<span style="color: #606060;">-</span>'}</td>
+            <td>${horizon ? horizon.label : '<span style="color: #606060;">-</span>'}</td>
+            <td class="tags-cell">${tagsHtml}</td>
+            <td>${scheduledHtml}</td>
+            <td>${createdHtml}</td>
+            <td class="actions-cell">${actionsHtml}</td>
+          </tr>
+        `;
+      }
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      grid.innerHTML = html;
+    }
+
+    function renderCalendarView(grid, filteredTasks, isReadOnly) {
+      const year = state.calendarYear;
+      const month = state.calendarMonth;
+      const today = getTodayString();
+
+      // Get first day of month and days in month
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startDayOfWeek = firstDay.getDay();
+
+      // Month name for header
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthName = `${monthNames[month]} ${year}`;
+
+      // Build task lookup by date
+      const tasksByDate = {};
+      const unscheduledTasks = [];
+      filteredTasks.forEach(task => {
+        if (task.scheduledDate) {
+          if (!tasksByDate[task.scheduledDate]) {
+            tasksByDate[task.scheduledDate] = [];
+          }
+          tasksByDate[task.scheduledDate].push(task);
+        } else {
+          unscheduledTasks.push(task);
+        }
+      });
+
+      let html = `
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <h2>${monthName}</h2>
+            <div class="calendar-nav">
+              <button onclick="navigateCalendar(-1)">← Prev</button>
+              <button onclick="navigateCalendar(0)">Today</button>
+              <button onclick="navigateCalendar(1)">Next →</button>
+            </div>
+          </div>
+          <div class="calendar-grid">
+      `;
+
+      // Day headers
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (const day of dayNames) {
+        html += `<div class="calendar-day-header">${day}</div>`;
+      }
+
+      // Previous month days (fill in start of first week)
+      const prevMonth = new Date(year, month, 0);
+      const prevMonthDays = prevMonth.getDate();
+      for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        const day = prevMonthDays - i;
+        const dateStr = formatDateStr(year, month - 1, day);
+        html += renderCalendarDay(dateStr, day, true, isReadOnly, tasksByDate[dateStr] || [], today);
+      }
+
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = formatDateStr(year, month, day);
+        html += renderCalendarDay(dateStr, day, false, isReadOnly, tasksByDate[dateStr] || [], today);
+      }
+
+      // Next month days (fill in end of last week)
+      const totalCells = startDayOfWeek + daysInMonth;
+      const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+      for (let day = 1; day <= remainingCells; day++) {
+        const dateStr = formatDateStr(year, month + 1, day);
+        html += renderCalendarDay(dateStr, day, true, isReadOnly, tasksByDate[dateStr] || [], today);
+      }
+
+      html += '</div>';
+
+      // Unscheduled tasks section
+      if (unscheduledTasks.length > 0) {
+        html += `
+          <div class="calendar-unscheduled">
+            <h3>Unscheduled Tasks (${unscheduledTasks.length})</h3>
+            <div class="calendar-unscheduled-list">
+        `;
+        for (const task of unscheduledTasks.slice(0, 20)) {
+          html += `<div class="calendar-unscheduled-task" onclick="showEditTaskModal('${task.id}')">${escapeHtml(task.title)}</div>`;
+        }
+        if (unscheduledTasks.length > 20) {
+          html += `<div class="calendar-unscheduled-task" style="color: #606060;">+${unscheduledTasks.length - 20} more</div>`;
+        }
+        html += `
+            </div>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      grid.innerHTML = html;
+    }
+
+    function renderCalendarDay(dateStr, day, isOtherMonth, isReadOnly, tasks, today) {
+      const isToday = dateStr === today;
+      const classes = ['calendar-day'];
+      if (isOtherMonth) classes.push('other-month');
+      if (isToday) classes.push('today');
+
+      let tasksHtml = '<div class="calendar-tasks">';
+      const maxTasks = 3;
+      for (let i = 0; i < Math.min(tasks.length, maxTasks); i++) {
+        const task = tasks[i];
+        tasksHtml += `<div class="calendar-task" onclick="showEditTaskModal('${task.id}')" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>`;
+      }
+      if (tasks.length > maxTasks) {
+        tasksHtml += `<div class="calendar-more">+${tasks.length - maxTasks} more</div>`;
+      }
+      tasksHtml += '</div>';
+
+      const addBtn = isReadOnly ? '' :
+        `<button class="calendar-add-btn" onclick="addTaskForDate('${dateStr}')">+</button>`;
+
+      return `
+        <div class="${classes.join(' ')}" data-date="${dateStr}">
+          <div class="day-number">${day}</div>
+          ${tasksHtml}
+          ${addBtn}
+        </div>
+      `;
+    }
+
+    function formatDateStr(year, month, day) {
+      // Handle month overflow/underflow
+      const date = new Date(year, month, day);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function navigateCalendar(direction) {
+      if (direction === 0) {
+        // Go to today
+        const now = new Date();
+        state.calendarMonth = now.getMonth();
+        state.calendarYear = now.getFullYear();
+      } else {
+        state.calendarMonth += direction;
+        if (state.calendarMonth > 11) {
+          state.calendarMonth = 0;
+          state.calendarYear++;
+        } else if (state.calendarMonth < 0) {
+          state.calendarMonth = 11;
+          state.calendarYear--;
+        }
+      }
+      render();
+    }
+
+    function addTaskForDate(dateStr) {
+      if (state.projects.length === 0) {
+        alert('Please create a project first');
+        showAddProjectModal();
+        return;
+      }
+      showAddTaskModal();
+      document.getElementById('task-scheduled').value = dateStr;
     }
 
     function renderCard(task) {
       const scheduledHtml = task.scheduledDate
         ? `<div class="card-scheduled">${formatDate(task.scheduledDate)}</div>`
+        : '';
+
+      const tagsHtml = task.tags && task.tags.length > 0
+        ? `<div class="card-tags">${task.tags.map(tag =>
+            `<span class="tag" style="background: ${getTagColor(tag)}">${escapeHtml(tag)}</span>`
+          ).join('')}</div>`
         : '';
 
       const children = getChildren(task.id);
@@ -1099,6 +2016,7 @@
             <button onclick="confirmDeleteTask('${task.id}')">×</button>
           </div>
           <div class="card-title">${escapeHtml(task.title)}</div>
+          ${tagsHtml}
           ${scheduledHtml}
           ${childrenHtml}
           ${parentHtml}
@@ -1155,6 +2073,373 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Tag color palette (muted, monospace-friendly colors)
+    const TAG_COLORS = [
+      '#a9f9dd', '#f9d9a9', '#a9d9f9', '#f9a9d9', '#d9f9a9',
+      '#f9a9a9', '#a9f9f9', '#d9a9f9', '#c9c9c9', '#f9f9a9'
+    ];
+
+    function getTagColor(tag) {
+      // Hash the tag string to get a consistent color
+      let hash = 0;
+      for (let i = 0; i < tag.length; i++) {
+        hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+    }
+
+    function getAllTags() {
+      const tagSet = new Set();
+      state.tasks.forEach(task => {
+        if (task.tags) {
+          task.tags.forEach(tag => tagSet.add(tag));
+        }
+      });
+      return Array.from(tagSet).sort();
+    }
+
+    function parseTags(tagString) {
+      if (!tagString) return [];
+      return tagString.split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length > 0);
+    }
+
+    function formatTags(tags) {
+      if (!tags || tags.length === 0) return '';
+      return tags.join(', ');
+    }
+
+    // =========================================
+    // Filtering & Sorting
+    // =========================================
+    function sortTasks(tasks) {
+      const { field, direction } = state.sort;
+      const horizonOrder = TIME_HORIZONS.map(h => h.id);
+
+      return [...tasks].sort((a, b) => {
+        let comparison = 0;
+
+        switch (field) {
+          case 'title':
+            comparison = (a.title || '').localeCompare(b.title || '');
+            break;
+          case 'createdAt':
+            comparison = (a.createdAt || 0) - (b.createdAt || 0);
+            break;
+          case 'scheduledDate':
+            // Tasks without scheduled date go to end
+            if (!a.scheduledDate && !b.scheduledDate) comparison = 0;
+            else if (!a.scheduledDate) comparison = 1;
+            else if (!b.scheduledDate) comparison = -1;
+            else comparison = a.scheduledDate.localeCompare(b.scheduledDate);
+            break;
+          case 'horizon':
+            comparison = horizonOrder.indexOf(a.horizon) - horizonOrder.indexOf(b.horizon);
+            break;
+          default:
+            comparison = 0;
+        }
+
+        return direction === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    function getFilteredTasks(tasks) {
+      const { tags, projects, horizons, search, hasChildren, hasParent } = state.filters;
+
+      return tasks.filter(task => {
+        // Tag filter
+        if (tags.length > 0) {
+          const taskTags = task.tags || [];
+          if (!tags.some(tag => taskTags.includes(tag))) {
+            return false;
+          }
+        }
+
+        // Project filter
+        if (projects.length > 0 && !projects.includes(task.projectId)) {
+          return false;
+        }
+
+        // Horizon filter
+        if (horizons.length > 0 && !horizons.includes(task.horizon)) {
+          return false;
+        }
+
+        // Search filter
+        if (search) {
+          const searchLower = search.toLowerCase();
+          const titleMatch = task.title.toLowerCase().includes(searchLower);
+          const tagMatch = (task.tags || []).some(t => t.toLowerCase().includes(searchLower));
+          if (!titleMatch && !tagMatch) {
+            return false;
+          }
+        }
+
+        // Has children filter
+        if (hasChildren !== null) {
+          const children = getChildren(task.id);
+          if (hasChildren && children.length === 0) return false;
+          if (!hasChildren && children.length > 0) return false;
+        }
+
+        // Has parent filter
+        if (hasParent !== null) {
+          if (hasParent && !task.parentId) return false;
+          if (!hasParent && task.parentId) return false;
+        }
+
+        return true;
+      });
+
+      // Apply sorting
+      return sortTasks(filtered);
+    }
+
+    function hasActiveFilters() {
+      const { tags, projects, horizons, search, hasChildren, hasParent } = state.filters;
+      return tags.length > 0 || projects.length > 0 || horizons.length > 0 ||
+             search !== '' || hasChildren !== null || hasParent !== null;
+    }
+
+    function clearFilters() {
+      state.filters = {
+        tags: [],
+        projects: [],
+        horizons: [],
+        search: '',
+        hasChildren: null,
+        hasParent: null
+      };
+      updateFilterUI();
+      render();
+    }
+
+    function toggleFilterTag(tag) {
+      const index = state.filters.tags.indexOf(tag);
+      if (index === -1) {
+        state.filters.tags.push(tag);
+      } else {
+        state.filters.tags.splice(index, 1);
+      }
+      updateFilterUI();
+      render();
+    }
+
+    function setFilterProject(projectId) {
+      if (projectId) {
+        state.filters.projects = [projectId];
+      } else {
+        state.filters.projects = [];
+      }
+      render();
+    }
+
+    function setFilterHorizon(horizon) {
+      if (horizon) {
+        state.filters.horizons = [horizon];
+      } else {
+        state.filters.horizons = [];
+      }
+      render();
+    }
+
+    function setFilterSearch(search) {
+      state.filters.search = search;
+      render();
+    }
+
+    function updateFilterUI() {
+      // Update tag pills
+      const container = document.getElementById('filter-tags-container');
+      const allTags = getAllTags();
+
+      if (allTags.length === 0) {
+        container.innerHTML = '<span style="color: #606060; font-size: 11px;">No tags</span>';
+      } else {
+        container.innerHTML = allTags.map(tag => {
+          const selected = state.filters.tags.includes(tag) ? 'selected' : '';
+          return `<span class="filter-tag ${selected}" style="background: ${getTagColor(tag)}" onclick="toggleFilterTag('${escapeHtml(tag)}')">${escapeHtml(tag)}</span>`;
+        }).join('');
+      }
+
+      // Update project dropdown
+      const projectSelect = document.getElementById('filter-project');
+      let projectHtml = '<option value="">All Projects</option>';
+      state.projects.forEach(p => {
+        const selected = state.filters.projects.includes(p.id) ? 'selected' : '';
+        projectHtml += `<option value="${p.id}" ${selected}>${escapeHtml(p.name)}</option>`;
+      });
+      projectSelect.innerHTML = projectHtml;
+
+      // Update horizon dropdown
+      const horizonSelect = document.getElementById('filter-horizon');
+      let horizonHtml = '<option value="">All Horizons</option>';
+      TIME_HORIZONS.forEach(h => {
+        const selected = state.filters.horizons.includes(h.id) ? 'selected' : '';
+        horizonHtml += `<option value="${h.id}" ${selected}>${h.label}</option>`;
+      });
+      horizonSelect.innerHTML = horizonHtml;
+
+      // Update search
+      document.getElementById('filter-search').value = state.filters.search;
+
+      // Update sort UI
+      document.getElementById('sort-field').value = state.sort.field;
+      document.getElementById('sort-direction-btn').textContent = state.sort.direction === 'asc' ? '↑' : '↓';
+
+      // Update active filters display
+      updateActiveFiltersDisplay();
+    }
+
+    function updateActiveFiltersDisplay() {
+      const container = document.getElementById('active-filters');
+      const chips = document.getElementById('active-filter-chips');
+
+      if (!hasActiveFilters()) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      let html = '';
+
+      // Tag chips
+      state.filters.tags.forEach(tag => {
+        html += `<span class="active-filter-chip">
+          <span class="tag" style="background: ${getTagColor(tag)}; padding: 0 4px;">${escapeHtml(tag)}</span>
+          <button onclick="toggleFilterTag('${escapeHtml(tag)}')">×</button>
+        </span>`;
+      });
+
+      // Project chip
+      if (state.filters.projects.length > 0) {
+        const project = state.projects.find(p => p.id === state.filters.projects[0]);
+        if (project) {
+          html += `<span class="active-filter-chip">
+            Project: ${escapeHtml(project.name)}
+            <button onclick="setFilterProject('')">×</button>
+          </span>`;
+        }
+      }
+
+      // Horizon chip
+      if (state.filters.horizons.length > 0) {
+        const horizon = TIME_HORIZONS.find(h => h.id === state.filters.horizons[0]);
+        if (horizon) {
+          html += `<span class="active-filter-chip">
+            Horizon: ${horizon.label}
+            <button onclick="setFilterHorizon('')">×</button>
+          </span>`;
+        }
+      }
+
+      // Search chip
+      if (state.filters.search) {
+        html += `<span class="active-filter-chip">
+          Search: "${escapeHtml(state.filters.search)}"
+          <button onclick="setFilterSearch(''); document.getElementById('filter-search').value = '';">×</button>
+        </span>`;
+      }
+
+      chips.innerHTML = html;
+    }
+
+    // =========================================
+    // Saved Views
+    // =========================================
+    function saveView(name) {
+      const view = {
+        id: generateId(),
+        name: name.trim(),
+        filters: JSON.parse(JSON.stringify(state.filters)),
+        sort: JSON.parse(JSON.stringify(state.sort)),
+        viewType: state.currentView,
+        createdAt: Date.now()
+      };
+      state.savedViews.push(view);
+      state.activeViewId = view.id;
+      saveSavedViews();
+      updateSavedViewsDropdown();
+    }
+
+    function loadView(viewId) {
+      const view = state.savedViews.find(v => v.id === viewId);
+      if (!view) return;
+
+      state.filters = JSON.parse(JSON.stringify(view.filters));
+      state.sort = JSON.parse(JSON.stringify(view.sort));
+      state.currentView = view.viewType;
+      state.activeViewId = view.id;
+
+      render();
+    }
+
+    function deleteView(viewId) {
+      state.savedViews = state.savedViews.filter(v => v.id !== viewId);
+      if (state.activeViewId === viewId) {
+        state.activeViewId = null;
+      }
+      saveSavedViews();
+      updateSavedViewsDropdown();
+    }
+
+    function saveSavedViews() {
+      storage.set('savedViews', state.savedViews);
+    }
+
+    function loadSavedViews() {
+      state.savedViews = storage.get('savedViews') || [];
+    }
+
+    function updateSavedViewsDropdown() {
+      const dropdown = document.getElementById('saved-views-dropdown');
+
+      if (state.savedViews.length === 0) {
+        dropdown.innerHTML = '<div class="saved-views-empty">No saved views</div>';
+        return;
+      }
+
+      let html = '';
+      for (const view of state.savedViews) {
+        const activeClass = state.activeViewId === view.id ? 'active' : '';
+        html += `
+          <div class="saved-view-item ${activeClass}" onclick="loadView('${view.id}')">
+            <span class="saved-view-name">${escapeHtml(view.name)}</span>
+            <button class="saved-view-delete" onclick="event.stopPropagation(); deleteView('${view.id}')" title="Delete">×</button>
+          </div>
+        `;
+      }
+      dropdown.innerHTML = html;
+    }
+
+    function showSaveViewModal() {
+      document.getElementById('view-name').value = '';
+      document.getElementById('save-view-modal').classList.remove('hidden');
+      document.getElementById('view-name').focus();
+    }
+
+    function hideSaveViewModal() {
+      document.getElementById('save-view-modal').classList.add('hidden');
+    }
+
+    function confirmSaveView() {
+      const name = document.getElementById('view-name').value.trim();
+      if (!name) {
+        alert('Please enter a view name');
+        return;
+      }
+      saveView(name);
+      hideSaveViewModal();
+    }
+
+    function toggleSavedViewsDropdown() {
+      const dropdown = document.getElementById('saved-views-dropdown');
+      dropdown.classList.toggle('visible');
     }
 
     function updateSnapshotSelector() {
@@ -1442,6 +2727,8 @@
       document.getElementById('task-title').value = '';
       document.getElementById('task-horizon').value = 'today';
       document.getElementById('task-scheduled').value = '';
+      document.getElementById('task-tags').value = '';
+      updateTagPreview();
       populateProjectSelect();
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
@@ -1453,6 +2740,8 @@
       document.getElementById('task-title').value = '';
       document.getElementById('task-horizon').value = horizon;
       document.getElementById('task-scheduled').value = '';
+      document.getElementById('task-tags').value = '';
+      updateTagPreview();
       populateProjectSelect(projectId);
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
@@ -1467,6 +2756,8 @@
       document.getElementById('task-title').value = task.title;
       document.getElementById('task-horizon').value = task.horizon;
       document.getElementById('task-scheduled').value = task.scheduledDate || '';
+      document.getElementById('task-tags').value = formatTags(task.tags);
+      updateTagPreview();
       populateProjectSelect(task.projectId);
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
@@ -1484,7 +2775,65 @@
 
     function hideTaskModal() {
       document.getElementById('task-modal').classList.add('hidden');
+      document.getElementById('tag-suggestions').classList.remove('visible');
       editingTaskId = null;
+    }
+
+    function updateTagPreview() {
+      const input = document.getElementById('task-tags');
+      const preview = document.getElementById('tag-preview');
+      const tags = parseTags(input.value);
+
+      if (tags.length === 0) {
+        preview.innerHTML = '';
+        return;
+      }
+
+      preview.innerHTML = tags.map(tag =>
+        `<span class="tag" style="background: ${getTagColor(tag)}" onclick="removeTag('${escapeHtml(tag)}')" title="Click to remove">${escapeHtml(tag)}</span>`
+      ).join('');
+    }
+
+    function removeTag(tagToRemove) {
+      const input = document.getElementById('task-tags');
+      const tags = parseTags(input.value).filter(t => t !== tagToRemove);
+      input.value = formatTags(tags);
+      updateTagPreview();
+    }
+
+    function showTagSuggestions() {
+      const input = document.getElementById('task-tags');
+      const suggestions = document.getElementById('tag-suggestions');
+      const allTags = getAllTags();
+      const currentTags = parseTags(input.value);
+      const inputValue = input.value.split(',').pop().trim().toLowerCase();
+
+      // Filter tags that match input and aren't already selected
+      const matchingTags = allTags.filter(tag =>
+        !currentTags.includes(tag) &&
+        (inputValue === '' || tag.includes(inputValue))
+      );
+
+      if (matchingTags.length === 0) {
+        suggestions.classList.remove('visible');
+        return;
+      }
+
+      suggestions.innerHTML = matchingTags.slice(0, 8).map(tag =>
+        `<div class="tag-suggestion" onclick="selectTagSuggestion('${escapeHtml(tag)}')">${escapeHtml(tag)}</div>`
+      ).join('');
+      suggestions.classList.add('visible');
+    }
+
+    function selectTagSuggestion(tag) {
+      const input = document.getElementById('task-tags');
+      const parts = input.value.split(',').map(t => t.trim()).filter(t => t);
+      parts.pop(); // Remove partial input
+      parts.push(tag);
+      input.value = parts.join(', ') + ', ';
+      updateTagPreview();
+      document.getElementById('tag-suggestions').classList.remove('visible');
+      input.focus();
     }
 
     function saveTaskModal() {
@@ -1492,6 +2841,7 @@
       const projectId = document.getElementById('task-project').value;
       const horizon = document.getElementById('task-horizon').value;
       const scheduled = document.getElementById('task-scheduled').value || null;
+      const tags = parseTags(document.getElementById('task-tags').value);
 
       if (!title) {
         alert('Please enter a task title');
@@ -1504,9 +2854,9 @@
       }
 
       if (editingTaskId) {
-        updateTask(editingTaskId, { title, projectId, horizon, scheduledDate: scheduled });
+        updateTask(editingTaskId, { title, projectId, horizon, scheduledDate: scheduled, tags });
       } else {
-        addTask(title, projectId, horizon, scheduled);
+        addTask(title, projectId, horizon, scheduled, null, tags);
       }
 
       hideTaskModal();
@@ -1684,6 +3034,115 @@
       document.getElementById('project-name').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') saveProjectModal();
       });
+
+      // Tag input handling
+      const tagInput = document.getElementById('task-tags');
+      tagInput.addEventListener('input', () => {
+        updateTagPreview();
+        showTagSuggestions();
+      });
+      tagInput.addEventListener('focus', () => {
+        showTagSuggestions();
+      });
+      tagInput.addEventListener('blur', () => {
+        // Delay to allow click on suggestion
+        setTimeout(() => {
+          document.getElementById('tag-suggestions').classList.remove('visible');
+        }, 150);
+      });
+
+      // Filter panel toggle
+      document.getElementById('filter-toggle-btn').addEventListener('click', () => {
+        state.filterPanelOpen = !state.filterPanelOpen;
+        const panel = document.getElementById('filter-panel');
+        if (state.filterPanelOpen) {
+          panel.classList.add('open');
+        } else {
+          panel.classList.remove('open');
+        }
+      });
+
+      // Clear filters
+      document.getElementById('clear-filters-btn').addEventListener('click', clearFilters);
+
+      // Filter search input
+      let searchTimeout;
+      document.getElementById('filter-search').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          setFilterSearch(e.target.value);
+        }, 200);
+      });
+
+      // Filter project select
+      document.getElementById('filter-project').addEventListener('change', (e) => {
+        setFilterProject(e.target.value);
+      });
+
+      // Filter horizon select
+      document.getElementById('filter-horizon').addEventListener('change', (e) => {
+        setFilterHorizon(e.target.value);
+      });
+
+      // View toggle buttons
+      document.getElementById('view-board').addEventListener('click', () => setView('board'));
+      document.getElementById('view-table').addEventListener('click', () => setView('table'));
+      document.getElementById('view-calendar').addEventListener('click', () => setView('calendar'));
+
+      // Sort controls
+      document.getElementById('sort-field').addEventListener('change', (e) => {
+        state.sort.field = e.target.value;
+        render();
+      });
+
+      document.getElementById('sort-direction-btn').addEventListener('click', () => {
+        state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+        updateSortUI();
+        render();
+      });
+
+      // Saved views
+      document.getElementById('views-toggle-btn').addEventListener('click', toggleSavedViewsDropdown);
+      document.getElementById('save-view-btn').addEventListener('click', showSaveViewModal);
+      document.getElementById('save-view-cancel-btn').addEventListener('click', hideSaveViewModal);
+      document.getElementById('save-view-save-btn').addEventListener('click', confirmSaveView);
+      document.getElementById('save-view-modal').addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) hideSaveViewModal();
+      });
+      document.getElementById('view-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmSaveView();
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('saved-views-dropdown');
+        const wrapper = e.target.closest('.saved-views-wrapper');
+        if (!wrapper && dropdown.classList.contains('visible')) {
+          dropdown.classList.remove('visible');
+        }
+      });
+    }
+
+    function setView(view) {
+      state.currentView = view;
+      render();
+    }
+
+    function updateSortUI() {
+      const btn = document.getElementById('sort-direction-btn');
+      btn.textContent = state.sort.direction === 'asc' ? '↑' : '↓';
+      document.getElementById('sort-field').value = state.sort.field;
+    }
+
+    function setSortField(field) {
+      if (state.sort.field === field) {
+        // Toggle direction if same field
+        state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort.field = field;
+        state.sort.direction = 'asc';
+      }
+      render();
     }
 
     // =========================================
@@ -1694,6 +3153,7 @@
       checkAndCreateDailySnapshot();
       setupEventListeners();
       setupTouchHandlers();
+      updateSavedViewsDropdown();
       render();
     }
 
