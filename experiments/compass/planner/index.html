@@ -326,6 +326,51 @@
       margin-top: 16px;
     }
 
+    .modal-metadata {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #303030;
+      font-size: 11px;
+    }
+
+    .modal-metadata.hidden {
+      display: none;
+    }
+
+    .metadata-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .metadata-label {
+      color: #606060;
+    }
+
+    .metadata-value {
+      color: #909090;
+    }
+
+    .metadata-history {
+      margin-top: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .metadata-history-item {
+      padding: 4px 0;
+      border-bottom: 1px solid #252525;
+      color: #808080;
+    }
+
+    .metadata-history-item:last-child {
+      border-bottom: none;
+    }
+
+    .metadata-history-date {
+      color: #505050;
+    }
+
     /* Read-only mode */
     .read-only .card {
       cursor: default;
@@ -751,6 +796,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      table-layout: auto;
     }
 
     .table-view th,
@@ -772,6 +818,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
+      white-space: nowrap;
     }
 
     .table-view th:hover {
@@ -796,7 +843,7 @@
     }
 
     .table-view td.title-cell {
-      max-width: 300px;
+      width: 100%;
     }
 
     .table-view td.title-cell .title-text {
@@ -804,9 +851,12 @@
       word-break: break-word;
     }
 
+    .table-view td.tags-cell {
+      white-space: nowrap;
+    }
+
     .table-view td.tags-cell .tag {
       margin-right: 4px;
-      margin-bottom: 2px;
     }
 
     .table-view td.actions-cell {
@@ -828,6 +878,26 @@
     /* Calendar View */
     .calendar-container {
       padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media (min-width: 1200px) {
+      .calendar-container {
+        flex-direction: row;
+      }
+
+      .calendar-main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .calendar-unscheduled {
+        width: 280px;
+        flex-shrink: 0;
+        margin-top: 0 !important;
+      }
     }
 
     .calendar-header {
@@ -1188,6 +1258,13 @@
         </div>
         <div id="tag-preview" class="tag-preview"></div>
       </div>
+      <div id="task-metadata" class="modal-metadata hidden">
+        <div class="metadata-row">
+          <span class="metadata-label">Created:</span>
+          <span id="task-created-date" class="metadata-value"></span>
+        </div>
+        <div id="task-history-section" class="metadata-history"></div>
+      </div>
       <div class="modal-actions">
         <button id="task-cancel-btn">Cancel</button>
         <button id="task-save-btn" class="primary">Save</button>
@@ -1323,7 +1400,8 @@
       activeViewId: null,
       filterPanelOpen: false,
       calendarMonth: new Date().getMonth(),
-      calendarYear: new Date().getFullYear()
+      calendarYear: new Date().getFullYear(),
+      defaultView: null  // null means board, or saved view id
     };
 
     // =========================================
@@ -1429,10 +1507,12 @@
       const projects = storage.get('projects');
       const tasks = storage.get('tasks');
       const savedViews = storage.get('savedViews');
+      const defaultView = storage.get('defaultView');
 
       state.projects = projects || [];
       state.tasks = tasks || [];
       state.savedViews = savedViews || [];
+      state.defaultView = defaultView || null;
     }
 
     function saveState() {
@@ -1667,11 +1747,23 @@
     }
 
     function renderBoardView(grid, filteredTasks, isReadOnly) {
+      // Determine which horizons have tasks (when filtering is active)
+      const activeHorizons = hasActiveFilters()
+        ? TIME_HORIZONS.filter(h => filteredTasks.some(t => t.horizon === h.id))
+        : TIME_HORIZONS;
+
+      // If no horizons have tasks after filtering, show all horizons
+      const horizonsToShow = activeHorizons.length > 0 ? activeHorizons : TIME_HORIZONS;
+      const columnCount = horizonsToShow.length + 1; // +1 for project column
+
+      // Set dynamic grid columns
+      grid.style.gridTemplateColumns = `160px repeat(${horizonsToShow.length}, minmax(130px, 1fr))`;
+
       let html = '';
 
       // Header row
       html += '<div class="grid-header project-col">Project</div>';
-      for (const h of TIME_HORIZONS) {
+      for (const h of horizonsToShow) {
         const dateRange = getHorizonDateRange(h.id);
         html += `<div class="grid-header">${h.label}<span class="grid-header-date">${dateRange}</span></div>`;
       }
@@ -1691,8 +1783,8 @@
           </div>
         `;
 
-        // Task cells for each horizon
-        for (const h of TIME_HORIZONS) {
+        // Task cells for each visible horizon
+        for (const h of horizonsToShow) {
           const tasks = filteredTasks.filter(t => t.projectId === project.id && t.horizon === h.id);
           html += `
             <div class="cell"
@@ -1832,15 +1924,16 @@
 
       let html = `
         <div class="calendar-container">
-          <div class="calendar-header">
-            <h2>${monthName}</h2>
-            <div class="calendar-nav">
-              <button onclick="navigateCalendar(-1)">← Prev</button>
-              <button onclick="navigateCalendar(0)">Today</button>
-              <button onclick="navigateCalendar(1)">Next →</button>
+          <div class="calendar-main">
+            <div class="calendar-header">
+              <h2>${monthName}</h2>
+              <div class="calendar-nav">
+                <button onclick="navigateCalendar(-1)">← Prev</button>
+                <button onclick="navigateCalendar(0)">Today</button>
+                <button onclick="navigateCalendar(1)">Next →</button>
+              </div>
             </div>
-          </div>
-          <div class="calendar-grid">
+            <div class="calendar-grid">
       `;
 
       // Day headers
@@ -1872,7 +1965,7 @@
         html += renderCalendarDay(dateStr, day, true, isReadOnly, tasksByDate[dateStr] || [], today);
       }
 
-      html += '</div>';
+      html += '</div></div>'; // Close calendar-grid and calendar-main
 
       // Unscheduled tasks section
       if (unscheduledTasks.length > 0) {
@@ -1965,10 +2058,6 @@
     }
 
     function renderCard(task) {
-      const scheduledHtml = task.scheduledDate
-        ? `<div class="card-scheduled">${formatDate(task.scheduledDate)}</div>`
-        : '';
-
       const tagsHtml = task.tags && task.tags.length > 0
         ? `<div class="card-tags">${task.tags.map(tag =>
             `<span class="tag" style="background: ${getTagColor(tag)}">${escapeHtml(tag)}</span>`
@@ -1992,16 +2081,6 @@
            </div>`
         : '';
 
-      const createdAt = task.createdAt ? formatTimestamp(task.createdAt) : '';
-      const historyCount = task.history ? task.history.length : 0;
-      const metaHtml = createdAt || historyCount > 1
-        ? `<div class="card-meta">
-             <span class="card-created">${createdAt ? '+' + createdAt : ''}</span>
-             ${historyCount > 1 ? `<button class="card-history-btn" onclick="event.stopPropagation(); toggleHistory('${task.id}')">${historyCount - 1} change${historyCount > 2 ? 's' : ''}</button>` : ''}
-           </div>
-           <div class="history-tooltip" id="history-${task.id}">${renderHistory(task)}</div>`
-        : '';
-
       return `
         <div class="card"
              draggable="true"
@@ -2017,10 +2096,8 @@
           </div>
           <div class="card-title">${escapeHtml(task.title)}</div>
           ${tagsHtml}
-          ${scheduledHtml}
           ${childrenHtml}
           ${parentHtml}
-          ${metaHtml}
         </div>
       `;
     }
@@ -2151,11 +2228,33 @@
     function getFilteredTasks(tasks) {
       const { tags, projects, horizons, search, hasChildren, hasParent } = state.filters;
 
-      return tasks.filter(task => {
-        // Tag filter
+      // Parse search for !tag exclusions
+      let searchTerms = [];
+      let excludeTags = [];
+      if (search) {
+        const parts = search.split(/\s+/);
+        for (const part of parts) {
+          if (part.startsWith('!') && part.length > 1) {
+            excludeTags.push(part.slice(1).toLowerCase());
+          } else if (part) {
+            searchTerms.push(part.toLowerCase());
+          }
+        }
+      }
+
+      const filtered = tasks.filter(task => {
+        // Tag filter (include)
         if (tags.length > 0) {
           const taskTags = task.tags || [];
           if (!tags.some(tag => taskTags.includes(tag))) {
+            return false;
+          }
+        }
+
+        // Tag exclusion filter (!tag in search)
+        if (excludeTags.length > 0) {
+          const taskTags = (task.tags || []).map(t => t.toLowerCase());
+          if (excludeTags.some(exTag => taskTags.includes(exTag))) {
             return false;
           }
         }
@@ -2170,13 +2269,17 @@
           return false;
         }
 
-        // Search filter
-        if (search) {
-          const searchLower = search.toLowerCase();
-          const titleMatch = task.title.toLowerCase().includes(searchLower);
-          const tagMatch = (task.tags || []).some(t => t.toLowerCase().includes(searchLower));
-          if (!titleMatch && !tagMatch) {
-            return false;
+        // Search filter (positive terms)
+        if (searchTerms.length > 0) {
+          const titleLower = task.title.toLowerCase();
+          const taskTagsLower = (task.tags || []).map(t => t.toLowerCase());
+          // All search terms must match (either title or tags)
+          for (const term of searchTerms) {
+            const titleMatch = titleLower.includes(term);
+            const tagMatch = taskTagsLower.some(t => t.includes(term));
+            if (!titleMatch && !tagMatch) {
+              return false;
+            }
           }
         }
 
@@ -2384,6 +2487,10 @@
       if (state.activeViewId === viewId) {
         state.activeViewId = null;
       }
+      if (state.defaultView === viewId) {
+        state.defaultView = null;
+        storage.set('defaultView', null);
+      }
       saveSavedViews();
       updateSavedViewsDropdown();
     }
@@ -2396,21 +2503,61 @@
       state.savedViews = storage.get('savedViews') || [];
     }
 
+    function setDefaultView(viewId) {
+      state.defaultView = viewId;
+      storage.set('defaultView', viewId);
+      updateSavedViewsDropdown();
+    }
+
+    function clearDefaultView() {
+      state.defaultView = null;
+      storage.set('defaultView', null);
+      updateSavedViewsDropdown();
+    }
+
+    function applyDefaultView() {
+      if (state.defaultView) {
+        const view = state.savedViews.find(v => v.id === state.defaultView);
+        if (view) {
+          state.filters = JSON.parse(JSON.stringify(view.filters));
+          state.sort = JSON.parse(JSON.stringify(view.sort));
+          state.currentView = view.viewType;
+          state.activeViewId = view.id;
+        }
+      }
+    }
+
     function updateSavedViewsDropdown() {
       const dropdown = document.getElementById('saved-views-dropdown');
 
+      let html = '';
+
+      // Reset to default option
+      if (state.defaultView) {
+        html += `<div class="saved-view-item" onclick="clearDefaultView()" style="border-bottom: 1px solid #404040;">
+          <span class="saved-view-name" style="color: #808080;">Clear default</span>
+        </div>`;
+      }
+
       if (state.savedViews.length === 0) {
-        dropdown.innerHTML = '<div class="saved-views-empty">No saved views</div>';
+        html += '<div class="saved-views-empty">No saved views</div>';
+        dropdown.innerHTML = html;
         return;
       }
 
-      let html = '';
       for (const view of state.savedViews) {
         const activeClass = state.activeViewId === view.id ? 'active' : '';
+        const isDefault = state.defaultView === view.id;
+        const defaultIndicator = isDefault ? ' <span style="color: #a9f9dd;">(default)</span>' : '';
+        const defaultBtn = isDefault ? '' :
+          `<button class="saved-view-delete" onclick="event.stopPropagation(); setDefaultView('${view.id}')" title="Set as default" style="margin-right: 4px;">★</button>`;
         html += `
           <div class="saved-view-item ${activeClass}" onclick="loadView('${view.id}')">
-            <span class="saved-view-name">${escapeHtml(view.name)}</span>
-            <button class="saved-view-delete" onclick="event.stopPropagation(); deleteView('${view.id}')" title="Delete">×</button>
+            <span class="saved-view-name">${escapeHtml(view.name)}${defaultIndicator}</span>
+            <span>
+              ${defaultBtn}
+              <button class="saved-view-delete" onclick="event.stopPropagation(); deleteView('${view.id}')" title="Delete">×</button>
+            </span>
           </div>
         `;
       }
@@ -2730,6 +2877,7 @@
       document.getElementById('task-tags').value = '';
       updateTagPreview();
       populateProjectSelect();
+      document.getElementById('task-metadata').classList.add('hidden');
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
     }
@@ -2743,6 +2891,7 @@
       document.getElementById('task-tags').value = '';
       updateTagPreview();
       populateProjectSelect(projectId);
+      document.getElementById('task-metadata').classList.add('hidden');
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
     }
@@ -2759,6 +2908,43 @@
       document.getElementById('task-tags').value = formatTags(task.tags);
       updateTagPreview();
       populateProjectSelect(task.projectId);
+
+      // Show metadata
+      const metadataEl = document.getElementById('task-metadata');
+      metadataEl.classList.remove('hidden');
+      document.getElementById('task-created-date').textContent = task.createdAt
+        ? formatDate(new Date(task.createdAt).toISOString().split('T')[0])
+        : 'Unknown';
+
+      // Show history
+      const historyEl = document.getElementById('task-history-section');
+      if (task.history && task.history.length > 0) {
+        historyEl.innerHTML = '<div style="color: #606060; margin-bottom: 4px;">History:</div>' +
+          task.history.slice().reverse().map(entry => {
+            const date = formatFullTimestamp(entry.timestamp);
+            let description = '';
+            switch (entry.type) {
+              case 'created': description = 'Created'; break;
+              case 'moved':
+                const fromH = TIME_HORIZONS.find(h => h.id === entry.fromHorizon);
+                const toH = TIME_HORIZONS.find(h => h.id === entry.toHorizon);
+                description = `Moved: ${fromH?.label || '?'} → ${toH?.label || '?'}`;
+                break;
+              case 'edited':
+                const fields = Object.keys(entry.changes || {}).join(', ');
+                description = `Edited: ${fields}`;
+                break;
+              case 'parent-set': description = `Linked to: ${entry.parentTitle || 'parent'}`; break;
+              case 'parent-unlinked': description = `Unlinked from: ${entry.oldParentTitle || 'parent'}`; break;
+              case 'parent-deleted': description = 'Parent was deleted'; break;
+              default: description = entry.type;
+            }
+            return `<div class="metadata-history-item"><span class="metadata-history-date">${date}</span> ${description}</div>`;
+          }).join('');
+      } else {
+        historyEl.innerHTML = '';
+      }
+
       document.getElementById('task-modal').classList.remove('hidden');
       document.getElementById('task-title').focus();
     }
@@ -3151,6 +3337,7 @@
     function init() {
       loadState();
       checkAndCreateDailySnapshot();
+      applyDefaultView();
       setupEventListeners();
       setupTouchHandlers();
       updateSavedViewsDropdown();
