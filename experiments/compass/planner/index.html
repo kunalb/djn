@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Work Planner</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #1a4a7a;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+
+    button:hover {
+      background: #1a4a7a;
+    }
+
+    button.primary {
+      background: #e94560;
+      border-color: #e94560;
+    }
+
+    button.primary:hover {
+      background: #ff6b6b;
+    }
+
+    select {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #1a4a7a;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+
+    /* Snapshot banner */
+    .snapshot-banner {
+      background: #533483;
+      padding: 8px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .snapshot-banner.hidden {
+      display: none;
+    }
+
+    /* Grid container */
+    .grid-container {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 180px repeat(7, minmax(160px, 1fr));
+      gap: 1px;
+      background: #0f3460;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      min-width: fit-content;
+    }
+
+    /* Header row */
+    .grid-header {
+      background: #16213e;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .grid-header.project-col {
+      text-align: left;
+    }
+
+    /* Project row */
+    .project-name {
+      background: #1a1a2e;
+      padding: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      min-height: 100px;
+    }
+
+    .project-name span {
+      word-break: break-word;
+    }
+
+    .project-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .project-name:hover .project-actions {
+      opacity: 1;
+    }
+
+    .project-actions button {
+      padding: 2px 6px;
+      font-size: 0.75rem;
+    }
+
+    /* Cells */
+    .cell {
+      background: #1a1a2e;
+      padding: 8px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cell.drag-over {
+      background: #2a2a4e;
+    }
+
+    /* Cards */
+    .card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 0.8125rem;
+      cursor: grab;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: #1a4a7a;
+    }
+
+    .card.dragging {
+      opacity: 0.5;
+    }
+
+    .card-title {
+      word-break: break-word;
+    }
+
+    .card-scheduled {
+      font-size: 0.6875rem;
+      color: #e94560;
+      margin-top: 4px;
+    }
+
+    .card-actions {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .card:hover .card-actions {
+      opacity: 1;
+    }
+
+    .card-actions button {
+      padding: 1px 5px;
+      font-size: 0.6875rem;
+      background: #0f3460;
+    }
+
+    /* Add project row */
+    .add-project-row {
+      grid-column: 1 / -1;
+      background: #1a1a2e;
+      padding: 12px;
+    }
+
+    .add-project-row button {
+      width: 100%;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 320px;
+      max-width: 90%;
+    }
+
+    .modal h2 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+    }
+
+    .modal-field {
+      margin-bottom: 12px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 0.8125rem;
+      margin-bottom: 4px;
+      color: #aaa;
+    }
+
+    .modal-field input,
+    .modal-field select {
+      width: 100%;
+      padding: 8px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      color: #eee;
+      font-size: 0.875rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    /* Read-only mode */
+    .read-only .card {
+      cursor: default;
+    }
+
+    .read-only .card-actions,
+    .read-only .project-actions,
+    .read-only .add-project-row,
+    .read-only .cell-add-btn {
+      display: none;
+    }
+
+    /* Cell add button */
+    .cell-add-btn {
+      background: transparent;
+      border: 1px dashed #0f3460;
+      color: #666;
+      padding: 4px;
+      font-size: 0.75rem;
+      margin-top: auto;
+    }
+
+    .cell-add-btn:hover {
+      background: #0f3460;
+      color: #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>Work Planner</h1>
+      <div class="header-actions">
+        <select id="snapshot-select">
+          <option value="">Current</option>
+        </select>
+        <button id="add-task-btn" class="primary">+ Add Task</button>
+      </div>
+    </header>
+
+    <div id="snapshot-banner" class="snapshot-banner hidden">
+      <span>Viewing snapshot from <strong id="snapshot-date"></strong></span>
+      <button id="exit-snapshot-btn">Back to Current</button>
+    </div>
+
+    <div class="grid-container">
+      <div id="grid" class="grid"></div>
+    </div>
+  </div>
+
+  <!-- Task Modal -->
+  <div id="task-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="task-modal-title">Add Task</h2>
+      <div class="modal-field">
+        <label for="task-title">Title</label>
+        <input type="text" id="task-title" placeholder="What needs to be done?">
+      </div>
+      <div class="modal-field">
+        <label for="task-project">Project</label>
+        <select id="task-project"></select>
+      </div>
+      <div class="modal-field">
+        <label for="task-horizon">Time Horizon</label>
+        <select id="task-horizon">
+          <option value="today">Today</option>
+          <option value="this-week">This Week</option>
+          <option value="this-month">This Month</option>
+          <option value="this-half">This Half</option>
+          <option value="this-year">This Year</option>
+          <option value="five-years">5 Years</option>
+          <option value="someday">Someday</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label for="task-scheduled">Scheduled Date (optional)</label>
+        <input type="date" id="task-scheduled">
+      </div>
+      <div class="modal-actions">
+        <button id="task-cancel-btn">Cancel</button>
+        <button id="task-save-btn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Modal -->
+  <div id="project-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="project-modal-title">Add Project</h2>
+      <div class="modal-field">
+        <label for="project-name">Project Name</label>
+        <input type="text" id="project-name" placeholder="Project name">
+      </div>
+      <div class="modal-actions">
+        <button id="project-cancel-btn">Cancel</button>
+        <button id="project-save-btn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="confirm-title">Confirm</h2>
+      <p id="confirm-message"></p>
+      <div class="modal-actions">
+        <button id="confirm-cancel-btn">Cancel</button>
+        <button id="confirm-ok-btn" class="primary">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================
+    // Storage Interface (decoupled)
+    // =========================================
+    const StorageInterface = {
+      get: (key) => { throw new Error('Not implemented'); },
+      set: (key, value) => { throw new Error('Not implemented'); },
+      remove: (key) => { throw new Error('Not implemented'); },
+      keys: () => { throw new Error('Not implemented'); }
+    };
+
+    // LocalStorage Adapter
+    const LocalStorageAdapter = {
+      prefix: 'workplanner_',
+
+      get(key) {
+        const raw = localStorage.getItem(this.prefix + key);
+        if (raw === null) return null;
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      },
+
+      set(key, value) {
+        localStorage.setItem(this.prefix + key, JSON.stringify(value));
+      },
+
+      remove(key) {
+        localStorage.removeItem(this.prefix + key);
+      },
+
+      keys() {
+        const result = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith(this.prefix)) {
+            result.push(key.slice(this.prefix.length));
+          }
+        }
+        return result;
+      }
+    };
+
+    // Use localStorage adapter
+    const storage = LocalStorageAdapter;
+
+    // =========================================
+    // Constants
+    // =========================================
+    const TIME_HORIZONS = [
+      { id: 'today', label: 'Today' },
+      { id: 'this-week', label: 'This Week' },
+      { id: 'this-month', label: 'This Month' },
+      { id: 'this-half', label: 'This Half' },
+      { id: 'this-year', label: 'This Year' },
+      { id: 'five-years', label: '5 Years' },
+      { id: 'someday', label: 'Someday' }
+    ];
+
+    // =========================================
+    // State
+    // =========================================
+    let state = {
+      projects: [],   // { id, name, order }
+      tasks: [],      // { id, title, projectId, horizon, scheduledDate }
+      viewingSnapshot: null  // null means current, otherwise date string
+    };
+
+    // =========================================
+    // Helpers
+    // =========================================
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function getTodayString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // =========================================
+    // Persistence
+    // =========================================
+    function loadState() {
+      const projects = storage.get('projects');
+      const tasks = storage.get('tasks');
+
+      state.projects = projects || [];
+      state.tasks = tasks || [];
+    }
+
+    function saveState() {
+      storage.set('projects', state.projects);
+      storage.set('tasks', state.tasks);
+    }
+
+    // =========================================
+    // Snapshot System
+    // =========================================
+    function getSnapshotKey(dateStr) {
+      return 'snapshot_' + dateStr;
+    }
+
+    function saveSnapshot(dateStr) {
+      const snapshot = {
+        date: dateStr,
+        projects: JSON.parse(JSON.stringify(state.projects)),
+        tasks: JSON.parse(JSON.stringify(state.tasks))
+      };
+      storage.set(getSnapshotKey(dateStr), snapshot);
+    }
+
+    function loadSnapshot(dateStr) {
+      return storage.get(getSnapshotKey(dateStr));
+    }
+
+    function getSnapshotDates() {
+      const keys = storage.keys();
+      return keys
+        .filter(k => k.startsWith('snapshot_'))
+        .map(k => k.replace('snapshot_', ''))
+        .sort()
+        .reverse();
+    }
+
+    function checkAndCreateDailySnapshot() {
+      const today = getTodayString();
+      const lastSnapshotDate = storage.get('lastSnapshotDate');
+
+      if (lastSnapshotDate !== today) {
+        // It's a new day - save snapshot of previous state
+        if (lastSnapshotDate && (state.projects.length > 0 || state.tasks.length > 0)) {
+          saveSnapshot(lastSnapshotDate);
+        }
+        storage.set('lastSnapshotDate', today);
+      }
+    }
+
+    // =========================================
+    // State Operations
+    // =========================================
+    function addProject(name) {
+      const project = {
+        id: generateId(),
+        name: name.trim(),
+        order: state.projects.length
+      };
+      state.projects.push(project);
+      saveState();
+      render();
+      return project;
+    }
+
+    function updateProject(id, name) {
+      const project = state.projects.find(p => p.id === id);
+      if (project) {
+        project.name = name.trim();
+        saveState();
+        render();
+      }
+    }
+
+    function deleteProject(id) {
+      state.projects = state.projects.filter(p => p.id !== id);
+      state.tasks = state.tasks.filter(t => t.projectId !== id);
+      saveState();
+      render();
+    }
+
+    function addTask(title, projectId, horizon, scheduledDate) {
+      const task = {
+        id: generateId(),
+        title: title.trim(),
+        projectId,
+        horizon,
+        scheduledDate: scheduledDate || null
+      };
+      state.tasks.push(task);
+      saveState();
+      render();
+      return task;
+    }
+
+    function updateTask(id, updates) {
+      const task = state.tasks.find(t => t.id === id);
+      if (task) {
+        Object.assign(task, updates);
+        saveState();
+        render();
+      }
+    }
+
+    function deleteTask(id) {
+      state.tasks = state.tasks.filter(t => t.id !== id);
+      saveState();
+      render();
+    }
+
+    function moveTask(taskId, newProjectId, newHorizon) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.projectId = newProjectId;
+        task.horizon = newHorizon;
+        saveState();
+        render();
+      }
+    }
+
+    // =========================================
+    // Rendering
+    // =========================================
+    function render() {
+      const grid = document.getElementById('grid');
+      const isReadOnly = state.viewingSnapshot !== null;
+
+      if (isReadOnly) {
+        grid.classList.add('read-only');
+      } else {
+        grid.classList.remove('read-only');
+      }
+
+      let html = '';
+
+      // Header row
+      html += '<div class="grid-header project-col">Project</div>';
+      for (const h of TIME_HORIZONS) {
+        html += `<div class="grid-header">${h.label}</div>`;
+      }
+
+      // Project rows
+      const projects = state.projects.length > 0 ? state.projects : [];
+
+      for (const project of projects) {
+        // Project name cell
+        html += `
+          <div class="project-name" data-project-id="${project.id}">
+            <span>${escapeHtml(project.name)}</span>
+            <div class="project-actions">
+              <button onclick="showEditProjectModal('${project.id}')">Edit</button>
+              <button onclick="confirmDeleteProject('${project.id}')">×</button>
+            </div>
+          </div>
+        `;
+
+        // Task cells for each horizon
+        for (const h of TIME_HORIZONS) {
+          const tasks = state.tasks.filter(t => t.projectId === project.id && t.horizon === h.id);
+          html += `
+            <div class="cell"
+                 data-project-id="${project.id}"
+                 data-horizon="${h.id}"
+                 ondragover="handleDragOver(event)"
+                 ondrop="handleDrop(event)"
+                 ondragleave="handleDragLeave(event)">
+          `;
+
+          for (const task of tasks) {
+            html += renderCard(task);
+          }
+
+          if (!isReadOnly) {
+            html += `<button class="cell-add-btn" onclick="showAddTaskModalForCell('${project.id}', '${h.id}')">+ Add</button>`;
+          }
+
+          html += '</div>';
+        }
+      }
+
+      // Add project row
+      if (!isReadOnly) {
+        html += `
+          <div class="add-project-row">
+            <button onclick="showAddProjectModal()">+ Add Project</button>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+
+      // Update snapshot selector
+      updateSnapshotSelector();
+      updateSnapshotBanner();
+    }
+
+    function renderCard(task) {
+      const scheduledHtml = task.scheduledDate
+        ? `<div class="card-scheduled">📅 ${formatDate(task.scheduledDate)}</div>`
+        : '';
+
+      return `
+        <div class="card"
+             draggable="true"
+             data-task-id="${task.id}"
+             ondragstart="handleDragStart(event)"
+             ondragend="handleDragEnd(event)">
+          <div class="card-actions">
+            <button onclick="showEditTaskModal('${task.id}')">Edit</button>
+            <button onclick="confirmDeleteTask('${task.id}')">×</button>
+          </div>
+          <div class="card-title">${escapeHtml(task.title)}</div>
+          ${scheduledHtml}
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function updateSnapshotSelector() {
+      const select = document.getElementById('snapshot-select');
+      const dates = getSnapshotDates();
+
+      let html = '<option value="">Current</option>';
+      for (const date of dates) {
+        const selected = state.viewingSnapshot === date ? 'selected' : '';
+        html += `<option value="${date}" ${selected}>${formatDate(date)}</option>`;
+      }
+      select.innerHTML = html;
+    }
+
+    function updateSnapshotBanner() {
+      const banner = document.getElementById('snapshot-banner');
+      const dateEl = document.getElementById('snapshot-date');
+
+      if (state.viewingSnapshot) {
+        banner.classList.remove('hidden');
+        dateEl.textContent = formatDate(state.viewingSnapshot);
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // =========================================
+    // Drag and Drop
+    // =========================================
+    let draggedTaskId = null;
+
+    function handleDragStart(event) {
+      if (state.viewingSnapshot) {
+        event.preventDefault();
+        return;
+      }
+      draggedTaskId = event.target.dataset.taskId;
+      event.target.classList.add('dragging');
+    }
+
+    function handleDragEnd(event) {
+      event.target.classList.remove('dragging');
+      draggedTaskId = null;
+    }
+
+    function handleDragOver(event) {
+      if (state.viewingSnapshot) return;
+      event.preventDefault();
+      event.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(event) {
+      event.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('drag-over');
+
+      if (state.viewingSnapshot || !draggedTaskId) return;
+
+      const cell = event.currentTarget;
+      const projectId = cell.dataset.projectId;
+      const horizon = cell.dataset.horizon;
+
+      moveTask(draggedTaskId, projectId, horizon);
+      draggedTaskId = null;
+    }
+
+    // =========================================
+    // Modal Handling
+    // =========================================
+    let editingTaskId = null;
+    let editingProjectId = null;
+
+    // Task Modal
+    function showAddTaskModal() {
+      editingTaskId = null;
+      document.getElementById('task-modal-title').textContent = 'Add Task';
+      document.getElementById('task-title').value = '';
+      document.getElementById('task-horizon').value = 'today';
+      document.getElementById('task-scheduled').value = '';
+      populateProjectSelect();
+      document.getElementById('task-modal').classList.remove('hidden');
+      document.getElementById('task-title').focus();
+    }
+
+    function showAddTaskModalForCell(projectId, horizon) {
+      editingTaskId = null;
+      document.getElementById('task-modal-title').textContent = 'Add Task';
+      document.getElementById('task-title').value = '';
+      document.getElementById('task-horizon').value = horizon;
+      document.getElementById('task-scheduled').value = '';
+      populateProjectSelect(projectId);
+      document.getElementById('task-modal').classList.remove('hidden');
+      document.getElementById('task-title').focus();
+    }
+
+    function showEditTaskModal(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      editingTaskId = taskId;
+      document.getElementById('task-modal-title').textContent = 'Edit Task';
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-horizon').value = task.horizon;
+      document.getElementById('task-scheduled').value = task.scheduledDate || '';
+      populateProjectSelect(task.projectId);
+      document.getElementById('task-modal').classList.remove('hidden');
+      document.getElementById('task-title').focus();
+    }
+
+    function populateProjectSelect(selectedId) {
+      const select = document.getElementById('task-project');
+      let html = '';
+      for (const p of state.projects) {
+        const selected = p.id === selectedId ? 'selected' : '';
+        html += `<option value="${p.id}" ${selected}>${escapeHtml(p.name)}</option>`;
+      }
+      select.innerHTML = html;
+    }
+
+    function hideTaskModal() {
+      document.getElementById('task-modal').classList.add('hidden');
+      editingTaskId = null;
+    }
+
+    function saveTaskModal() {
+      const title = document.getElementById('task-title').value.trim();
+      const projectId = document.getElementById('task-project').value;
+      const horizon = document.getElementById('task-horizon').value;
+      const scheduled = document.getElementById('task-scheduled').value || null;
+
+      if (!title) {
+        alert('Please enter a task title');
+        return;
+      }
+
+      if (!projectId) {
+        alert('Please select or create a project first');
+        return;
+      }
+
+      if (editingTaskId) {
+        updateTask(editingTaskId, { title, projectId, horizon, scheduledDate: scheduled });
+      } else {
+        addTask(title, projectId, horizon, scheduled);
+      }
+
+      hideTaskModal();
+    }
+
+    // Project Modal
+    function showAddProjectModal() {
+      editingProjectId = null;
+      document.getElementById('project-modal-title').textContent = 'Add Project';
+      document.getElementById('project-name').value = '';
+      document.getElementById('project-modal').classList.remove('hidden');
+      document.getElementById('project-name').focus();
+    }
+
+    function showEditProjectModal(projectId) {
+      const project = state.projects.find(p => p.id === projectId);
+      if (!project) return;
+
+      editingProjectId = projectId;
+      document.getElementById('project-modal-title').textContent = 'Edit Project';
+      document.getElementById('project-name').value = project.name;
+      document.getElementById('project-modal').classList.remove('hidden');
+      document.getElementById('project-name').focus();
+    }
+
+    function hideProjectModal() {
+      document.getElementById('project-modal').classList.add('hidden');
+      editingProjectId = null;
+    }
+
+    function saveProjectModal() {
+      const name = document.getElementById('project-name').value.trim();
+
+      if (!name) {
+        alert('Please enter a project name');
+        return;
+      }
+
+      if (editingProjectId) {
+        updateProject(editingProjectId, name);
+      } else {
+        addProject(name);
+      }
+
+      hideProjectModal();
+    }
+
+    // Confirm Modal
+    let confirmCallback = null;
+
+    function showConfirmModal(title, message, callback) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      confirmCallback = callback;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    function hideConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      confirmCallback = null;
+    }
+
+    function confirmDeleteTask(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      showConfirmModal(
+        'Delete Task',
+        `Are you sure you want to delete "${task.title}"?`,
+        () => deleteTask(taskId)
+      );
+    }
+
+    function confirmDeleteProject(projectId) {
+      const project = state.projects.find(p => p.id === projectId);
+      if (!project) return;
+      const taskCount = state.tasks.filter(t => t.projectId === projectId).length;
+      showConfirmModal(
+        'Delete Project',
+        `Are you sure you want to delete "${project.name}" and its ${taskCount} task(s)?`,
+        () => deleteProject(projectId)
+      );
+    }
+
+    // =========================================
+    // Snapshot Viewing
+    // =========================================
+    function viewSnapshot(dateStr) {
+      if (!dateStr) {
+        // Return to current
+        state.viewingSnapshot = null;
+        loadState();
+        render();
+        return;
+      }
+
+      const snapshot = loadSnapshot(dateStr);
+      if (snapshot) {
+        state.viewingSnapshot = dateStr;
+        state.projects = snapshot.projects;
+        state.tasks = snapshot.tasks;
+        render();
+      }
+    }
+
+    function exitSnapshotView() {
+      viewSnapshot(null);
+    }
+
+    // =========================================
+    // Event Listeners
+    // =========================================
+    function setupEventListeners() {
+      // Add task button
+      document.getElementById('add-task-btn').addEventListener('click', () => {
+        if (state.projects.length === 0) {
+          alert('Please create a project first');
+          showAddProjectModal();
+          return;
+        }
+        showAddTaskModal();
+      });
+
+      // Task modal
+      document.getElementById('task-cancel-btn').addEventListener('click', hideTaskModal);
+      document.getElementById('task-save-btn').addEventListener('click', saveTaskModal);
+      document.getElementById('task-modal').addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) hideTaskModal();
+      });
+
+      // Project modal
+      document.getElementById('project-cancel-btn').addEventListener('click', hideProjectModal);
+      document.getElementById('project-save-btn').addEventListener('click', saveProjectModal);
+      document.getElementById('project-modal').addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) hideProjectModal();
+      });
+
+      // Confirm modal
+      document.getElementById('confirm-cancel-btn').addEventListener('click', hideConfirmModal);
+      document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        hideConfirmModal();
+      });
+      document.getElementById('confirm-modal').addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) hideConfirmModal();
+      });
+
+      // Snapshot selector
+      document.getElementById('snapshot-select').addEventListener('change', (e) => {
+        viewSnapshot(e.target.value);
+      });
+
+      // Exit snapshot button
+      document.getElementById('exit-snapshot-btn').addEventListener('click', exitSnapshotView);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          hideTaskModal();
+          hideProjectModal();
+          hideConfirmModal();
+        }
+        if (e.key === 'Enter' && !e.target.matches('input, textarea')) {
+          if (!document.getElementById('task-modal').classList.contains('hidden')) {
+            saveTaskModal();
+          } else if (!document.getElementById('project-modal').classList.contains('hidden')) {
+            saveProjectModal();
+          }
+        }
+      });
+
+      // Enter key in inputs
+      document.getElementById('task-title').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveTaskModal();
+      });
+      document.getElementById('project-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveProjectModal();
+      });
+    }
+
+    // =========================================
+    // Initialization
+    // =========================================
+    function init() {
+      loadState();
+      checkAndCreateDailySnapshot();
+      setupEventListeners();
+      render();
+    }
+
+    // Start the app
+    init();
+  </script>
+</body>
+</html>
