@@ -474,22 +474,30 @@
       outline-offset: 2px;
     }
 
-    /* SVG overlay for relationship lines */
-    .svg-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 50;
+    /* Relationship highlighting */
+    .card.highlight-self {
+      background: #1a3a2a;
+      border-color: #a9f9dd;
     }
 
-    .relationship-line {
-      stroke: #a9f9dd;
-      stroke-width: 1;
-      fill: none;
-      opacity: 0.6;
+    .card.highlight-parent {
+      background: #1a2a20;
+      border-color: #70c0a0;
+    }
+
+    .card.highlight-grandparent {
+      background: #151f1a;
+      border-color: #507060;
+    }
+
+    .card.highlight-child {
+      background: #1a2a20;
+      border-color: #70c0a0;
+    }
+
+    .card.highlight-grandchild {
+      background: #151f1a;
+      border-color: #507060;
     }
 
     /* Touch drag ghost */
@@ -541,9 +549,6 @@
     <div class="grid-container">
       <div id="grid" class="grid"></div>
     </div>
-
-    <!-- SVG overlay for relationship lines -->
-    <svg id="svg-overlay" class="svg-overlay"></svg>
   </div>
 
   <!-- Task Modal -->
@@ -1056,8 +1061,8 @@
       const children = getChildren(task.id);
       const childrenHtml = children.length > 0
         ? `<div class="card-children"
-               onmouseenter="showRelationshipLines('${task.id}')"
-               onmouseleave="hideRelationshipLines()">
+               onmouseenter="highlightRelationships('${task.id}')"
+               onmouseleave="clearHighlights()">
              ↳ ${children.length} child${children.length > 1 ? 'ren' : ''}
            </div>`
         : '';
@@ -1254,40 +1259,55 @@
     }
 
     // =========================================
-    // Relationship Lines (SVG)
+    // Relationship Highlighting
     // =========================================
-    function showRelationshipLines(parentId) {
-      const svg = document.getElementById('svg-overlay');
-      svg.innerHTML = '';
+    function highlightRelationships(taskId) {
+      clearHighlights();
+
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Highlight self
+      const selfCard = document.querySelector(`[data-task-id="${taskId}"]`);
+      if (selfCard) selfCard.classList.add('highlight-self');
+
+      // Highlight ancestors (parents, grandparents, etc.)
+      highlightAncestors(task.parentId, 1);
+
+      // Highlight descendants (children, grandchildren, etc.)
+      highlightDescendants(taskId, 1);
+    }
+
+    function highlightAncestors(parentId, depth) {
+      if (!parentId || depth > 3) return;
 
       const parentCard = document.querySelector(`[data-task-id="${parentId}"]`);
-      if (!parentCard) return;
+      if (parentCard) {
+        parentCard.classList.add(depth === 1 ? 'highlight-parent' : 'highlight-grandparent');
+      }
 
-      const children = getChildren(parentId);
-      const parentRect = parentCard.getBoundingClientRect();
-      const parentX = parentRect.left + parentRect.width / 2;
-      const parentY = parentRect.bottom;
-
-      for (const child of children) {
-        const childCard = document.querySelector(`[data-task-id="${child.id}"]`);
-        if (!childCard) continue;
-
-        const childRect = childCard.getBoundingClientRect();
-        const childX = childRect.left + childRect.width / 2;
-        const childY = childRect.top;
-
-        // Draw curved line
-        const midY = (parentY + childY) / 2;
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('class', 'relationship-line');
-        path.setAttribute('d', `M ${parentX} ${parentY} C ${parentX} ${midY}, ${childX} ${midY}, ${childX} ${childY}`);
-        svg.appendChild(path);
+      const parent = state.tasks.find(t => t.id === parentId);
+      if (parent && parent.parentId) {
+        highlightAncestors(parent.parentId, depth + 1);
       }
     }
 
-    function hideRelationshipLines() {
-      const svg = document.getElementById('svg-overlay');
-      svg.innerHTML = '';
+    function highlightDescendants(taskId, depth) {
+      if (depth > 3) return;
+
+      const children = getChildren(taskId);
+      for (const child of children) {
+        const childCard = document.querySelector(`[data-task-id="${child.id}"]`);
+        if (childCard) {
+          childCard.classList.add(depth === 1 ? 'highlight-child' : 'highlight-grandchild');
+        }
+        highlightDescendants(child.id, depth + 1);
+      }
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight-self, .highlight-parent, .highlight-grandparent, .highlight-child, .highlight-grandchild')
+        .forEach(el => el.classList.remove('highlight-self', 'highlight-parent', 'highlight-grandparent', 'highlight-child', 'highlight-grandchild'));
     }
 
     // =========================================
