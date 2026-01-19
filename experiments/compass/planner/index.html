@@ -113,7 +113,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 160px repeat(7, minmax(140px, 1fr));
+      grid-template-columns: 160px repeat(8, minmax(130px, 1fr));
       gap: 1px;
       background: #404040;
       border: 1px solid #404040;
@@ -354,6 +354,81 @@
       border-color: #505050;
     }
 
+    /* Card metadata */
+    .card-meta {
+      font-size: 10px;
+      color: #606060;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-created {
+      opacity: 0.8;
+    }
+
+    .card-history-btn {
+      padding: 0;
+      background: transparent;
+      border: none;
+      color: #606060;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 10px;
+    }
+
+    .card-history-btn:hover {
+      color: #a9f9dd;
+    }
+
+    /* History tooltip */
+    .history-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      background: #000;
+      border: 1px solid #404040;
+      border-radius: 2px;
+      padding: 8px;
+      margin-bottom: 4px;
+      font-size: 10px;
+      color: #808080;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 20;
+      display: none;
+    }
+
+    .history-tooltip.visible {
+      display: block;
+    }
+
+    .history-item {
+      padding: 2px 0;
+      border-bottom: 1px solid #252525;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-date {
+      color: #505050;
+    }
+
+    /* Column date range */
+    .grid-header-date {
+      display: block;
+      font-size: 9px;
+      font-weight: 400;
+      color: #505050;
+      margin-top: 2px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
     /* Child count badge */
     .card-children {
       display: inline-flex;
@@ -489,6 +564,7 @@
           <option value="today">Today</option>
           <option value="this-week">This Week</option>
           <option value="this-month">This Month</option>
+          <option value="this-quarter">This Quarter</option>
           <option value="this-half">This Half</option>
           <option value="this-year">This Year</option>
           <option value="five-years">5 Years</option>
@@ -588,6 +664,7 @@
       { id: 'today', label: 'Today' },
       { id: 'this-week', label: 'This Week' },
       { id: 'this-month', label: 'This Month' },
+      { id: 'this-quarter', label: 'This Quarter' },
       { id: 'this-half', label: 'This Half' },
       { id: 'this-year', label: 'This Year' },
       { id: 'five-years', label: '5 Years' },
@@ -599,7 +676,7 @@
     // =========================================
     let state = {
       projects: [],   // { id, name, order }
-      tasks: [],      // { id, title, projectId, horizon, scheduledDate, parentId }
+      tasks: [],      // { id, title, projectId, horizon, scheduledDate, parentId, createdAt, history[] }
       viewingSnapshot: null  // null means current, otherwise date string
     };
 
@@ -618,6 +695,85 @@
       if (!dateStr) return '';
       const d = new Date(dateStr + 'T00:00:00');
       return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatShortDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function formatTimestamp(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function formatFullTimestamp(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getHorizonDateRange(horizonId) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const day = now.getDate();
+      const dayOfWeek = now.getDay();
+
+      const formatRange = (d1, d2) => {
+        const opts = { month: 'short', day: 'numeric' };
+        if (d2) {
+          return `${d1.toLocaleDateString(undefined, opts)} – ${d2.toLocaleDateString(undefined, opts)}`;
+        }
+        return d1.toLocaleDateString(undefined, opts);
+      };
+
+      switch (horizonId) {
+        case 'today':
+          return formatRange(now);
+
+        case 'this-week': {
+          const startOfWeek = new Date(year, month, day - dayOfWeek);
+          const endOfWeek = new Date(year, month, day - dayOfWeek + 6);
+          return formatRange(startOfWeek, endOfWeek);
+        }
+
+        case 'this-month': {
+          const startOfMonth = new Date(year, month, 1);
+          const endOfMonth = new Date(year, month + 1, 0);
+          return formatRange(startOfMonth, endOfMonth);
+        }
+
+        case 'this-quarter': {
+          const quarter = Math.floor(month / 3);
+          const startOfQuarter = new Date(year, quarter * 3, 1);
+          const endOfQuarter = new Date(year, quarter * 3 + 3, 0);
+          return formatRange(startOfQuarter, endOfQuarter);
+        }
+
+        case 'this-half': {
+          const half = month < 6 ? 0 : 1;
+          const startOfHalf = new Date(year, half * 6, 1);
+          const endOfHalf = new Date(year, half * 6 + 6, 0);
+          return formatRange(startOfHalf, endOfHalf);
+        }
+
+        case 'this-year': {
+          return `${year}`;
+        }
+
+        case 'five-years': {
+          return `${year} – ${year + 5}`;
+        }
+
+        case 'someday':
+          return 'no deadline';
+
+        default:
+          return '';
+      }
     }
 
     // =========================================
@@ -710,18 +866,26 @@
     }
 
     function addTask(title, projectId, horizon, scheduledDate, parentId) {
+      const now = Date.now();
       const task = {
         id: generateId(),
         title: title.trim(),
         projectId,
         horizon,
         scheduledDate: scheduledDate || null,
-        parentId: parentId || null
+        parentId: parentId || null,
+        createdAt: now,
+        history: [{ type: 'created', timestamp: now, horizon, projectId }]
       };
       state.tasks.push(task);
       saveState();
       render();
       return task;
+    }
+
+    function addHistory(task, entry) {
+      if (!task.history) task.history = [];
+      task.history.push({ ...entry, timestamp: Date.now() });
     }
 
     function getChildren(taskId) {
@@ -730,15 +894,18 @@
 
     function setParent(childId, parentId) {
       const child = state.tasks.find(t => t.id === childId);
+      const parent = state.tasks.find(t => t.id === parentId);
       if (child && childId !== parentId) {
         // Prevent circular references
         let current = parentId;
         while (current) {
           if (current === childId) return; // Would create cycle
-          const parent = state.tasks.find(t => t.id === current);
-          current = parent ? parent.parentId : null;
+          const p = state.tasks.find(t => t.id === current);
+          current = p ? p.parentId : null;
         }
+        const oldParentId = child.parentId;
         child.parentId = parentId;
+        addHistory(child, { type: 'parent-set', parentId, parentTitle: parent?.title, oldParentId });
         saveState();
         render();
       }
@@ -746,8 +913,11 @@
 
     function unlinkFromParent(taskId) {
       const task = state.tasks.find(t => t.id === taskId);
-      if (task) {
+      if (task && task.parentId) {
+        const oldParentId = task.parentId;
+        const oldParent = state.tasks.find(t => t.id === oldParentId);
         task.parentId = null;
+        addHistory(task, { type: 'parent-unlinked', oldParentId, oldParentTitle: oldParent?.title });
         saveState();
         render();
       }
@@ -756,6 +926,17 @@
     function updateTask(id, updates) {
       const task = state.tasks.find(t => t.id === id);
       if (task) {
+        const changes = {};
+        if (updates.title && updates.title !== task.title) changes.title = { from: task.title, to: updates.title };
+        if (updates.horizon && updates.horizon !== task.horizon) changes.horizon = { from: task.horizon, to: updates.horizon };
+        if (updates.projectId && updates.projectId !== task.projectId) changes.projectId = { from: task.projectId, to: updates.projectId };
+        if (updates.scheduledDate !== undefined && updates.scheduledDate !== task.scheduledDate) {
+          changes.scheduledDate = { from: task.scheduledDate, to: updates.scheduledDate };
+        }
+
+        if (Object.keys(changes).length > 0) {
+          addHistory(task, { type: 'edited', changes });
+        }
         Object.assign(task, updates);
         saveState();
         render();
@@ -765,7 +946,10 @@
     function deleteTask(id) {
       // Unlink children before deleting
       state.tasks.forEach(t => {
-        if (t.parentId === id) t.parentId = null;
+        if (t.parentId === id) {
+          t.parentId = null;
+          addHistory(t, { type: 'parent-deleted' });
+        }
       });
       state.tasks = state.tasks.filter(t => t.id !== id);
       saveState();
@@ -775,6 +959,11 @@
     function moveTask(taskId, newProjectId, newHorizon) {
       const task = state.tasks.find(t => t.id === taskId);
       if (task) {
+        const oldHorizon = task.horizon;
+        const oldProjectId = task.projectId;
+        if (oldHorizon !== newHorizon || oldProjectId !== newProjectId) {
+          addHistory(task, { type: 'moved', fromHorizon: oldHorizon, toHorizon: newHorizon, fromProjectId: oldProjectId, toProjectId: newProjectId });
+        }
         task.projectId = newProjectId;
         task.horizon = newHorizon;
         saveState();
@@ -800,7 +989,8 @@
       // Header row
       html += '<div class="grid-header project-col">Project</div>';
       for (const h of TIME_HORIZONS) {
-        html += `<div class="grid-header">${h.label}</div>`;
+        const dateRange = getHorizonDateRange(h.id);
+        html += `<div class="grid-header">${h.label}<span class="grid-header-date">${dateRange}</span></div>`;
       }
 
       // Project rows
@@ -860,7 +1050,7 @@
 
     function renderCard(task) {
       const scheduledHtml = task.scheduledDate
-        ? `<div class="card-scheduled">📅 ${formatDate(task.scheduledDate)}</div>`
+        ? `<div class="card-scheduled">${formatDate(task.scheduledDate)}</div>`
         : '';
 
       const children = getChildren(task.id);
@@ -880,6 +1070,16 @@
            </div>`
         : '';
 
+      const createdAt = task.createdAt ? formatTimestamp(task.createdAt) : '';
+      const historyCount = task.history ? task.history.length : 0;
+      const metaHtml = createdAt || historyCount > 1
+        ? `<div class="card-meta">
+             <span class="card-created">${createdAt ? '+' + createdAt : ''}</span>
+             ${historyCount > 1 ? `<button class="card-history-btn" onclick="event.stopPropagation(); toggleHistory('${task.id}')">${historyCount - 1} change${historyCount > 2 ? 's' : ''}</button>` : ''}
+           </div>
+           <div class="history-tooltip" id="history-${task.id}">${renderHistory(task)}</div>`
+        : '';
+
       return `
         <div class="card"
              draggable="true"
@@ -897,8 +1097,53 @@
           ${scheduledHtml}
           ${childrenHtml}
           ${parentHtml}
+          ${metaHtml}
         </div>
       `;
+    }
+
+    function renderHistory(task) {
+      if (!task.history || task.history.length === 0) return '';
+
+      return task.history.slice().reverse().map(entry => {
+        const date = formatFullTimestamp(entry.timestamp);
+        let description = '';
+
+        switch (entry.type) {
+          case 'created':
+            description = 'Created';
+            break;
+          case 'moved':
+            const fromH = TIME_HORIZONS.find(h => h.id === entry.fromHorizon);
+            const toH = TIME_HORIZONS.find(h => h.id === entry.toHorizon);
+            description = `Moved: ${fromH?.label || '?'} → ${toH?.label || '?'}`;
+            break;
+          case 'edited':
+            const fields = Object.keys(entry.changes || {}).join(', ');
+            description = `Edited: ${fields}`;
+            break;
+          case 'parent-set':
+            description = `Linked to: ${entry.parentTitle || 'parent'}`;
+            break;
+          case 'parent-unlinked':
+            description = `Unlinked from: ${entry.oldParentTitle || 'parent'}`;
+            break;
+          case 'parent-deleted':
+            description = 'Parent was deleted';
+            break;
+          default:
+            description = entry.type;
+        }
+
+        return `<div class="history-item"><span class="history-date">${date}</span> ${description}</div>`;
+      }).join('');
+    }
+
+    function toggleHistory(taskId) {
+      const el = document.getElementById('history-' + taskId);
+      if (el) {
+        el.classList.toggle('visible');
+      }
     }
 
     function escapeHtml(text) {
