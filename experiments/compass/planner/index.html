@@ -315,6 +315,77 @@
       background: #0f3460;
       color: #eee;
     }
+
+    /* Child count badge */
+    .card-children {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.6875rem;
+      color: #7b68ee;
+      margin-top: 4px;
+      cursor: pointer;
+    }
+
+    .card-children:hover {
+      color: #9d8bff;
+    }
+
+    /* Parent indicator */
+    .card-parent {
+      font-size: 0.6875rem;
+      color: #50c878;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-parent .unlink-btn {
+      padding: 0 4px;
+      font-size: 0.625rem;
+      background: transparent;
+      border: none;
+      color: #888;
+      cursor: pointer;
+    }
+
+    .card-parent .unlink-btn:hover {
+      color: #e94560;
+    }
+
+    /* Card drop target highlight */
+    .card.drop-target {
+      outline: 2px dashed #7b68ee;
+      outline-offset: 2px;
+    }
+
+    /* SVG overlay for relationship lines */
+    .svg-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .relationship-line {
+      stroke: #7b68ee;
+      stroke-width: 2;
+      fill: none;
+      opacity: 0.7;
+    }
+
+    /* Touch drag ghost */
+    .touch-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.8;
+      transform: translate(-50%, -50%);
+    }
   </style>
 </head>
 <body>
@@ -337,6 +408,9 @@
     <div class="grid-container">
       <div id="grid" class="grid"></div>
     </div>
+
+    <!-- SVG overlay for relationship lines -->
+    <svg id="svg-overlay" class="svg-overlay"></svg>
   </div>
 
   <!-- Task Modal -->
@@ -467,7 +541,7 @@
     // =========================================
     let state = {
       projects: [],   // { id, name, order }
-      tasks: [],      // { id, title, projectId, horizon, scheduledDate }
+      tasks: [],      // { id, title, projectId, horizon, scheduledDate, parentId }
       viewingSnapshot: null  // null means current, otherwise date string
     };
 
@@ -577,18 +651,48 @@
       render();
     }
 
-    function addTask(title, projectId, horizon, scheduledDate) {
+    function addTask(title, projectId, horizon, scheduledDate, parentId) {
       const task = {
         id: generateId(),
         title: title.trim(),
         projectId,
         horizon,
-        scheduledDate: scheduledDate || null
+        scheduledDate: scheduledDate || null,
+        parentId: parentId || null
       };
       state.tasks.push(task);
       saveState();
       render();
       return task;
+    }
+
+    function getChildren(taskId) {
+      return state.tasks.filter(t => t.parentId === taskId);
+    }
+
+    function setParent(childId, parentId) {
+      const child = state.tasks.find(t => t.id === childId);
+      if (child && childId !== parentId) {
+        // Prevent circular references
+        let current = parentId;
+        while (current) {
+          if (current === childId) return; // Would create cycle
+          const parent = state.tasks.find(t => t.id === current);
+          current = parent ? parent.parentId : null;
+        }
+        child.parentId = parentId;
+        saveState();
+        render();
+      }
+    }
+
+    function unlinkFromParent(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.parentId = null;
+        saveState();
+        render();
+      }
     }
 
     function updateTask(id, updates) {
@@ -601,6 +705,10 @@
     }
 
     function deleteTask(id) {
+      // Unlink children before deleting
+      state.tasks.forEach(t => {
+        if (t.parentId === id) t.parentId = null;
+      });
       state.tasks = state.tasks.filter(t => t.id !== id);
       saveState();
       render();
@@ -697,18 +805,40 @@
         ? `<div class="card-scheduled">📅 ${formatDate(task.scheduledDate)}</div>`
         : '';
 
+      const children = getChildren(task.id);
+      const childrenHtml = children.length > 0
+        ? `<div class="card-children"
+               onmouseenter="showRelationshipLines('${task.id}')"
+               onmouseleave="hideRelationshipLines()">
+             ↳ ${children.length} child${children.length > 1 ? 'ren' : ''}
+           </div>`
+        : '';
+
+      const parent = task.parentId ? state.tasks.find(t => t.id === task.parentId) : null;
+      const parentHtml = parent
+        ? `<div class="card-parent">
+             ↑ ${escapeHtml(parent.title.slice(0, 20))}${parent.title.length > 20 ? '...' : ''}
+             <button class="unlink-btn" onclick="event.stopPropagation(); unlinkFromParent('${task.id}')" title="Unlink">×</button>
+           </div>`
+        : '';
+
       return `
         <div class="card"
              draggable="true"
              data-task-id="${task.id}"
              ondragstart="handleDragStart(event)"
-             ondragend="handleDragEnd(event)">
+             ondragend="handleDragEnd(event)"
+             ondragover="handleCardDragOver(event)"
+             ondrop="handleCardDrop(event)"
+             ondragleave="handleCardDragLeave(event)">
           <div class="card-actions">
             <button onclick="showEditTaskModal('${task.id}')">Edit</button>
             <button onclick="confirmDeleteTask('${task.id}')">×</button>
           </div>
           <div class="card-title">${escapeHtml(task.title)}</div>
           ${scheduledHtml}
+          ${childrenHtml}
+          ${parentHtml}
         </div>
       `;
     }
@@ -755,11 +885,14 @@
       }
       draggedTaskId = event.target.dataset.taskId;
       event.target.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
     }
 
     function handleDragEnd(event) {
       event.target.classList.remove('dragging');
       draggedTaskId = null;
+      // Clean up any drop targets
+      document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
     }
 
     function handleDragOver(event) {
@@ -778,12 +911,199 @@
 
       if (state.viewingSnapshot || !draggedTaskId) return;
 
+      // If dropped directly on cell (not on a card), move the task
       const cell = event.currentTarget;
       const projectId = cell.dataset.projectId;
       const horizon = cell.dataset.horizon;
 
       moveTask(draggedTaskId, projectId, horizon);
       draggedTaskId = null;
+    }
+
+    // Card-to-card drop handlers (for parent-child relationships)
+    function handleCardDragOver(event) {
+      if (state.viewingSnapshot) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const card = event.currentTarget;
+      if (card.dataset.taskId !== draggedTaskId) {
+        card.classList.add('drop-target');
+      }
+    }
+
+    function handleCardDragLeave(event) {
+      event.currentTarget.classList.remove('drop-target');
+    }
+
+    function handleCardDrop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.classList.remove('drop-target');
+
+      if (state.viewingSnapshot || !draggedTaskId) return;
+
+      const targetTaskId = event.currentTarget.dataset.taskId;
+      if (targetTaskId && targetTaskId !== draggedTaskId) {
+        // Make dragged task a child of target task
+        setParent(draggedTaskId, targetTaskId);
+      }
+      draggedTaskId = null;
+    }
+
+    // =========================================
+    // Relationship Lines (SVG)
+    // =========================================
+    function showRelationshipLines(parentId) {
+      const svg = document.getElementById('svg-overlay');
+      svg.innerHTML = '';
+
+      const parentCard = document.querySelector(`[data-task-id="${parentId}"]`);
+      if (!parentCard) return;
+
+      const children = getChildren(parentId);
+      const parentRect = parentCard.getBoundingClientRect();
+      const parentX = parentRect.left + parentRect.width / 2;
+      const parentY = parentRect.bottom;
+
+      for (const child of children) {
+        const childCard = document.querySelector(`[data-task-id="${child.id}"]`);
+        if (!childCard) continue;
+
+        const childRect = childCard.getBoundingClientRect();
+        const childX = childRect.left + childRect.width / 2;
+        const childY = childRect.top;
+
+        // Draw curved line
+        const midY = (parentY + childY) / 2;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'relationship-line');
+        path.setAttribute('d', `M ${parentX} ${parentY} C ${parentX} ${midY}, ${childX} ${midY}, ${childX} ${childY}`);
+        svg.appendChild(path);
+      }
+    }
+
+    function hideRelationshipLines() {
+      const svg = document.getElementById('svg-overlay');
+      svg.innerHTML = '';
+    }
+
+    // =========================================
+    // Touch Support for Drag and Drop
+    // =========================================
+    let touchDragData = null;
+    let touchGhost = null;
+
+    function setupTouchHandlers() {
+      const grid = document.getElementById('grid');
+
+      grid.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.card');
+        if (!card || state.viewingSnapshot) return;
+
+        touchDragData = {
+          taskId: card.dataset.taskId,
+          startX: e.touches[0].clientX,
+          startY: e.touches[0].clientY,
+          isDragging: false
+        };
+      }, { passive: true });
+
+      grid.addEventListener('touchmove', (e) => {
+        if (!touchDragData) return;
+
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchDragData.startX;
+        const dy = touch.clientY - touchDragData.startY;
+
+        // Start dragging after threshold
+        if (!touchDragData.isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+          touchDragData.isDragging = true;
+          createTouchGhost(touchDragData.taskId);
+        }
+
+        if (touchDragData.isDragging) {
+          e.preventDefault();
+          moveTouchGhost(touch.clientX, touch.clientY);
+          updateTouchDropTarget(touch.clientX, touch.clientY);
+        }
+      }, { passive: false });
+
+      grid.addEventListener('touchend', (e) => {
+        if (!touchDragData || !touchDragData.isDragging) {
+          touchDragData = null;
+          return;
+        }
+
+        const touch = e.changedTouches[0];
+        const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        if (dropTarget) {
+          const targetCard = dropTarget.closest('.card');
+          const targetCell = dropTarget.closest('.cell');
+
+          if (targetCard && targetCard.dataset.taskId !== touchDragData.taskId) {
+            // Drop on card = make child
+            setParent(touchDragData.taskId, targetCard.dataset.taskId);
+          } else if (targetCell) {
+            // Drop on cell = move
+            moveTask(touchDragData.taskId, targetCell.dataset.projectId, targetCell.dataset.horizon);
+          }
+        }
+
+        removeTouchGhost();
+        clearTouchDropTargets();
+        touchDragData = null;
+      }, { passive: true });
+
+      grid.addEventListener('touchcancel', () => {
+        removeTouchGhost();
+        clearTouchDropTargets();
+        touchDragData = null;
+      }, { passive: true });
+    }
+
+    function createTouchGhost(taskId) {
+      const card = document.querySelector(`[data-task-id="${taskId}"]`);
+      if (!card) return;
+
+      touchGhost = card.cloneNode(true);
+      touchGhost.classList.add('touch-ghost');
+      touchGhost.style.width = card.offsetWidth + 'px';
+      document.body.appendChild(touchGhost);
+    }
+
+    function moveTouchGhost(x, y) {
+      if (touchGhost) {
+        touchGhost.style.left = x + 'px';
+        touchGhost.style.top = y + 'px';
+      }
+    }
+
+    function removeTouchGhost() {
+      if (touchGhost) {
+        touchGhost.remove();
+        touchGhost = null;
+      }
+    }
+
+    function updateTouchDropTarget(x, y) {
+      clearTouchDropTargets();
+      const el = document.elementFromPoint(x, y);
+      if (!el) return;
+
+      const card = el.closest('.card');
+      const cell = el.closest('.cell');
+
+      if (card && card.dataset.taskId !== touchDragData.taskId) {
+        card.classList.add('drop-target');
+      } else if (cell) {
+        cell.classList.add('drag-over');
+      }
+    }
+
+    function clearTouchDropTargets() {
+      document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
     }
 
     // =========================================
@@ -1050,6 +1370,7 @@
       loadState();
       checkAndCreateDailySnapshot();
       setupEventListeners();
+      setupTouchHandlers();
       render();
     }
 
