@@ -183,6 +183,30 @@ function load() {
 }
 ```
 
+### Date Handling (IMPORTANT)
+**Never use `toISOString()` for local date strings** - it converts to UTC which causes off-by-one day bugs in western timezones.
+
+```javascript
+// BAD - toISOString uses UTC, causes timezone bugs:
+const dateStr = new Date().toISOString().split('T')[0];
+
+// GOOD - use local time methods:
+function getDateStr(d = new Date()) {
+  return d.getFullYear() + '-' +
+         String(d.getMonth() + 1).padStart(2, '0') + '-' +
+         String(d.getDate()).padStart(2, '0');
+}
+```
+
+When parsing date strings, always append time to avoid timezone shifts:
+```javascript
+// BAD - may shift to previous day in some timezones:
+new Date('2024-01-15')
+
+// GOOD - explicit local midnight:
+new Date('2024-01-15T00:00:00')
+```
+
 ## Checklist Before Done
 
 - [ ] Works offline (PWA)

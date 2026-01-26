@@ -387,7 +387,6 @@
     }
     @media (pointer: coarse) {
       .entry {
-        min-height: 32px;
         padding: 4px 8px;
       }
     }
@@ -409,7 +408,6 @@
     }
     .entry-text {
       outline: none;
-      min-height: 14px;
       word-break: break-word;
       cursor: text;
       line-height: 1.3;
@@ -450,6 +448,11 @@
       cursor: ns-resize;
       /* Visual indicator on hover/touch */
     }
+    @media (pointer: coarse) {
+      .entry-resize {
+        height: 24px;
+      }
+    }
     .entry-resize::after {
       content: '';
       position: absolute;
@@ -471,6 +474,9 @@
       font-size: 9px;
       color: var(--text-muted);
       margin-bottom: 1px;
+    }
+    .entry.compact .entry-time {
+      display: none;
     }
     .entry-preview {
       position: absolute;
@@ -511,6 +517,121 @@
     .notes-content:empty:before {
       content: 'Notes...';
       color: var(--text-placeholder);
+    }
+
+    /* Edit popup */
+    .edit-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--overlay);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .edit-overlay.show { display: flex; }
+    .edit-popup {
+      background: var(--bg-card);
+      border: 1px solid var(--border-button);
+      border-radius: 4px;
+      padding: 16px;
+      width: 280px;
+      max-width: 90vw;
+      box-shadow: 0 4px 12px var(--shadow-strong);
+    }
+    .edit-popup h3 {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+    .edit-field {
+      margin-bottom: 12px;
+    }
+    .edit-field label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .edit-field input,
+    .edit-field textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 12px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    .edit-field input:focus,
+    .edit-field textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    .edit-field textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .edit-row {
+      display: flex;
+      gap: 12px;
+    }
+    .edit-row .edit-field {
+      flex: 1;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      justify-content: space-between;
+    }
+    .edit-actions-left {
+      display: flex;
+      gap: 8px;
+    }
+    .edit-btn {
+      padding: 8px 12px;
+      border: 1px solid var(--border-button);
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    .edit-btn:hover {
+      background: var(--bg-hover);
+    }
+    .edit-btn.primary {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+    .edit-btn.primary:hover {
+      opacity: 0.9;
+    }
+    .edit-btn.danger {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+    }
+    .edit-btn.danger:hover {
+      background: var(--accent-red);
+      color: white;
+    }
+    .edit-btn.duplicate {
+      color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+    .edit-btn.duplicate:hover {
+      background: var(--accent-green);
+      color: white;
     }
 
     /* Current time indicator */
@@ -559,6 +680,36 @@
       <p><span class="version-label">Version:</span> <span id="versionNumber">1.0.0</span></p>
       <p><span class="version-label">Updated:</span> <span id="versionDate">2025-01-13</span></p>
       <p class="built-with">Built with Claude</p>
+    </div>
+  </div>
+
+  <div class="edit-overlay" id="editOverlay" onclick="hideEditPopup(event)">
+    <div class="edit-popup" onclick="event.stopPropagation()">
+      <h3 id="editPopupTitle">Edit Entry</h3>
+      <div class="edit-row">
+        <div class="edit-field">
+          <label for="editStartTime">Start Time</label>
+          <input type="time" id="editStartTime">
+        </div>
+        <div class="edit-field">
+          <label for="editDuration">Duration (min)</label>
+          <input type="number" id="editDuration" min="15" step="15">
+        </div>
+      </div>
+      <div class="edit-field">
+        <label for="editText">Description</label>
+        <textarea id="editText"></textarea>
+      </div>
+      <div class="edit-actions">
+        <div class="edit-actions-left">
+          <button class="edit-btn danger" onclick="deleteFromPopup()">Delete</button>
+          <button class="edit-btn duplicate" id="duplicateBtn" onclick="duplicateFromPopup()">To Actual</button>
+        </div>
+        <div>
+          <button class="edit-btn" onclick="hideEditPopup()">Cancel</button>
+          <button class="edit-btn primary" onclick="saveEditPopup()">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -706,7 +857,8 @@
 
     function renderEntry(container, entry, type) {
       const el = document.createElement('div');
-      el.className = 'entry ' + (type === 'plans' ? 'plan' : 'actual');
+      const isCompact = entry.durationMins <= 30;
+      el.className = 'entry ' + (type === 'plans' ? 'plan' : 'actual') + (isCompact ? ' compact' : '');
 
       const topPx = (entry.hour * 60 + entry.minutes) * PX_PER_MIN;
       const heightPx = Math.max(entry.durationMins * PX_PER_MIN, 12);
@@ -725,7 +877,7 @@
         <button class="entry-delete" onclick="deleteEntry(event, '${type}', '${entry.id}')">&times;</button>
         <div class="entry-resize"></div>
       `;
-      el.querySelector('.entry-text').textContent = entry.text || '';
+      el.querySelector('.entry-text').innerText = entry.text || '';
 
       // Double-click to duplicate plan to actual
       if (type === 'plans') {
@@ -738,7 +890,7 @@
       // Text editing
       const textEl = el.querySelector('.entry-text');
       textEl.addEventListener('blur', () => {
-        updateEntryText(type, entry.id, textEl.textContent);
+        updateEntryText(type, entry.id, textEl.innerText);
       });
 
       // Resize functionality
@@ -746,40 +898,45 @@
       resizeEl.addEventListener('mousedown', (e) => startResize(e, entry, type));
       resizeEl.addEventListener('touchstart', (e) => startResize(e, entry, type), { passive: false });
 
-      // Drag functionality
-      function handleDragStart(e) {
-        // Don't drag if clicking on resize handle, delete button, or editing text
+      // Drag functionality (mouse only - touch uses pending drag below)
+      function handleMouseDragStart(e) {
         if (e.target.classList.contains('entry-resize') ||
             e.target.classList.contains('entry-delete') ||
             e.target.classList.contains('entry-text')) return;
         startDrag(e, entry, type, el, container);
       }
-      el.addEventListener('mousedown', handleDragStart);
-      el.addEventListener('touchstart', handleDragStart, { passive: false });
+      el.addEventListener('mousedown', handleMouseDragStart);
 
-      // Long-press to duplicate plan to actual (touch alternative to double-click)
-      if (type === 'plans') {
-        let longPressTimer = null;
-        el.addEventListener('touchstart', (e) => {
-          if (e.target.classList.contains('entry-delete')) return;
-          longPressTimer = setTimeout(() => {
-            duplicateToActual(entry);
-            longPressTimer = null;
-          }, 600); // 600ms long press
-        });
-        el.addEventListener('touchend', () => {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
+      // Touch: use pending drag to allow long-press detection
+      el.addEventListener('touchstart', (e) => {
+        if (e.target.classList.contains('entry-delete') ||
+            e.target.classList.contains('entry-resize') ||
+            e.target.classList.contains('entry-text')) return;
+
+        const coords = getEventCoords(e);
+        pendingTouchDrag = {
+          entry,
+          type,
+          element: el,
+          container,
+          startX: coords.clientX,
+          startY: coords.clientY,
+          moved: false
+        };
+
+        // Start long-press timer
+        activeLongPressTimer = setTimeout(() => {
+          if (pendingTouchDrag && !pendingTouchDrag.moved) {
+            showEditPopup(entry, type);
+            pendingTouchDrag = null;
           }
-        });
-        el.addEventListener('touchmove', () => {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-        });
-      }
+          activeLongPressTimer = null;
+        }, 500);
+
+        document.addEventListener('touchmove', handlePendingTouchMove, { passive: false });
+        document.addEventListener('touchend', handlePendingTouchEnd);
+        document.addEventListener('touchcancel', handlePendingTouchEnd);
+      }, { passive: true });
 
       container.appendChild(el);
     }
@@ -817,7 +974,45 @@
 
     // ============ ENTRY MANAGEMENT ============
     let createState = null;
+    let activeLongPressTimer = null; // Track long-press timer globally
+    let pendingTouchDrag = null; // Track pending touch drag for long-press detection
+    const DRAG_THRESHOLD = 10; // Pixels to move before drag starts
     const createDragSetup = new WeakSet(); // Track which containers have listeners
+
+    function handlePendingTouchMove(e) {
+      if (!pendingTouchDrag) return;
+
+      const coords = getEventCoords(e);
+      const dx = coords.clientX - pendingTouchDrag.startX;
+      const dy = coords.clientY - pendingTouchDrag.startY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_THRESHOLD && !pendingTouchDrag.moved) {
+        // Movement detected - cancel long-press and start drag
+        pendingTouchDrag.moved = true;
+
+        if (activeLongPressTimer) {
+          clearTimeout(activeLongPressTimer);
+          activeLongPressTimer = null;
+        }
+
+        // Start the actual drag
+        const { entry, type, element, container } = pendingTouchDrag;
+        startDragFromTouch(entry, type, element, container, pendingTouchDrag.startX, pendingTouchDrag.startY);
+      }
+    }
+
+    function handlePendingTouchEnd() {
+      if (activeLongPressTimer) {
+        clearTimeout(activeLongPressTimer);
+        activeLongPressTimer = null;
+      }
+      pendingTouchDrag = null;
+
+      document.removeEventListener('touchmove', handlePendingTouchMove);
+      document.removeEventListener('touchend', handlePendingTouchEnd);
+      document.removeEventListener('touchcancel', handlePendingTouchEnd);
+    }
 
     function setupCreateDrag(container, type) {
       if (createDragSetup.has(container)) return; // Already setup
@@ -1012,12 +1207,114 @@
       render();
     }
 
+    // ============ EDIT POPUP ============
+    let editPopupEntry = null;
+    let editPopupType = null;
+
+    function showEditPopup(entry, type) {
+      // Clean up any pending drag state
+      pendingTouchDrag = null;
+      document.removeEventListener('touchmove', handlePendingTouchMove);
+      document.removeEventListener('touchend', handlePendingTouchEnd);
+      document.removeEventListener('touchcancel', handlePendingTouchEnd);
+
+      editPopupEntry = entry;
+      editPopupType = type;
+
+      // Set title based on type
+      document.getElementById('editPopupTitle').textContent =
+        type === 'plans' ? 'Edit Plan' : 'Edit Entry';
+
+      // Show/hide duplicate button (only for plans)
+      document.getElementById('duplicateBtn').style.display =
+        type === 'plans' ? 'inline-block' : 'none';
+
+      // Populate fields
+      const startTime = formatTime(entry.hour, entry.minutes);
+      document.getElementById('editStartTime').value = startTime;
+      document.getElementById('editDuration').value = entry.durationMins;
+      document.getElementById('editText').value = entry.text || '';
+
+      document.getElementById('editOverlay').classList.add('show');
+    }
+
+    function hideEditPopup(e) {
+      if (!e || e.target === document.getElementById('editOverlay')) {
+        document.getElementById('editOverlay').classList.remove('show');
+        editPopupEntry = null;
+        editPopupType = null;
+      }
+    }
+
+    function saveEditPopup() {
+      if (!editPopupEntry || !editPopupType) return;
+
+      const dayData = getDayData();
+      const entry = dayData[editPopupType].find(e => e.id === editPopupEntry.id);
+      if (!entry) {
+        hideEditPopup();
+        return;
+      }
+
+      // Parse time
+      const timeValue = document.getElementById('editStartTime').value;
+      const [hours, minutes] = timeValue.split(':').map(Number);
+      const duration = parseInt(document.getElementById('editDuration').value) || 30;
+      const text = document.getElementById('editText').value;
+
+      // Validate
+      if (isNaN(hours) || isNaN(minutes)) {
+        alert('Invalid time');
+        return;
+      }
+
+      // Update entry
+      entry.hour = hours;
+      entry.minutes = minutes;
+      entry.durationMins = Math.max(15, Math.round(duration / 15) * 15);
+      entry.text = text;
+
+      saveAllData();
+      render();
+      hideEditPopup();
+    }
+
+    function deleteFromPopup() {
+      if (!editPopupEntry || !editPopupType) return;
+
+      const dayData = getDayData();
+      dayData[editPopupType] = dayData[editPopupType].filter(e => e.id !== editPopupEntry.id);
+
+      saveAllData();
+      render();
+      hideEditPopup();
+    }
+
+    function duplicateFromPopup() {
+      if (!editPopupEntry || editPopupType !== 'plans') return;
+
+      duplicateToActual(editPopupEntry);
+      hideEditPopup();
+    }
+
     // ============ RESIZE ============
     let resizeState = null;
 
     function startResize(e, entry, type) {
       e.preventDefault();
       e.stopPropagation();
+
+      // Clear any long-press timer and pending drag
+      if (activeLongPressTimer) {
+        clearTimeout(activeLongPressTimer);
+        activeLongPressTimer = null;
+      }
+      if (pendingTouchDrag) {
+        pendingTouchDrag = null;
+        document.removeEventListener('touchmove', handlePendingTouchMove);
+        document.removeEventListener('touchend', handlePendingTouchEnd);
+        document.removeEventListener('touchcancel', handlePendingTouchEnd);
+      }
 
       const coords = getEventCoords(e);
       const isTouch = e.type === 'touchstart';
@@ -1090,9 +1387,44 @@
       return null;
     }
 
+    function startDragFromTouch(entry, type, element, container, startX, startY) {
+      // Clean up pending drag listeners first
+      document.removeEventListener('touchmove', handlePendingTouchMove);
+      document.removeEventListener('touchend', handlePendingTouchEnd);
+      document.removeEventListener('touchcancel', handlePendingTouchEnd);
+
+      const rect = container.getBoundingClientRect();
+      const entryTopMins = entry.hour * 60 + entry.minutes;
+
+      dragState = {
+        entry,
+        type,
+        targetType: type,
+        element,
+        container,
+        containerRect: rect,
+        startY: startY,
+        startTopMins: entryTopMins,
+        scrollTop: container.parentElement.scrollTop,
+        isTouch: true
+      };
+
+      element.classList.add('dragging');
+
+      document.addEventListener('touchmove', doDrag, { passive: false });
+      document.addEventListener('touchend', endDrag);
+      document.addEventListener('touchcancel', endDrag);
+    }
+
     function startDrag(e, entry, type, element, container) {
       e.preventDefault();
       e.stopPropagation();
+
+      // Clear any long-press timer
+      if (activeLongPressTimer) {
+        clearTimeout(activeLongPressTimer);
+        activeLongPressTimer = null;
+      }
 
       const coords = getEventCoords(e);
       const rect = container.getBoundingClientRect();
@@ -1319,7 +1651,9 @@
     function changeDay(delta) {
       const d = new Date(state.currentDate + 'T00:00:00');
       d.setDate(d.getDate() + delta);
-      state.currentDate = d.toISOString().split('T')[0];
+      state.currentDate = d.getFullYear() + '-' +
+             String(d.getMonth() + 1).padStart(2, '0') + '-' +
+             String(d.getDate()).padStart(2, '0');
       render();
     }
 
@@ -1536,8 +1870,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.5.0';
-    const APP_UPDATED = '2025-01-16';
+    const APP_VERSION = '1.6.1';
+    const APP_UPDATED = '2026-01-20';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;
@@ -1552,7 +1886,10 @@
     }
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hideVersionInfo();
+      if (e.key === 'Escape') {
+        hideVersionInfo();
+        hideEditPopup();
+      }
     });
 
     // ============ THEME ============
