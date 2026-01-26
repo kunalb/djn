@@ -418,8 +418,8 @@
     }
     .entry-delete {
       position: absolute;
-      top: 1px;
-      right: 2px;
+      top: 0;
+      right: 0;
       background: none;
       border: none;
       color: var(--text-faint);
@@ -434,10 +434,26 @@
     }
     .entry:hover .entry-delete { opacity: 1; }
     .entry-delete:hover { color: var(--accent-red); background: rgba(201, 70, 44, 0.1); }
-    /* Show delete on touch devices */
+    /* Show delete on touch devices - 44px minimum touch target */
     @media (pointer: coarse) {
-      .entry-delete { opacity: 0.6; font-size: 16px; padding: 6px 10px; }
+      .entry-delete {
+        opacity: 0.7;
+        font-size: 18px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        top: -8px;
+        right: -8px;
+      }
       .entry-delete:active { opacity: 1; color: var(--accent-red); }
+    }
+    /* Long-press visual feedback */
+    .entry.long-pressing {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: -2px;
     }
     .entry-resize {
       position: absolute;
@@ -924,14 +940,22 @@
           moved: false
         };
 
+        // Visual feedback after brief delay
+        setTimeout(() => {
+          if (pendingTouchDrag && !pendingTouchDrag.moved) {
+            el.classList.add('long-pressing');
+          }
+        }, 150);
+
         // Start long-press timer
         activeLongPressTimer = setTimeout(() => {
           if (pendingTouchDrag && !pendingTouchDrag.moved) {
+            el.classList.remove('long-pressing');
             showEditPopup(entry, type);
             pendingTouchDrag = null;
           }
           activeLongPressTimer = null;
-        }, 500);
+        }, LONG_PRESS_MS);
 
         document.addEventListener('touchmove', handlePendingTouchMove, { passive: false });
         document.addEventListener('touchend', handlePendingTouchEnd);
@@ -976,7 +1000,8 @@
     let createState = null;
     let activeLongPressTimer = null; // Track long-press timer globally
     let pendingTouchDrag = null; // Track pending touch drag for long-press detection
-    const DRAG_THRESHOLD = 10; // Pixels to move before drag starts
+    const DRAG_THRESHOLD = 15; // Pixels to move before drag starts (generous for touch)
+    const LONG_PRESS_MS = 400; // Time to trigger long-press edit
     const createDragSetup = new WeakSet(); // Track which containers have listeners
 
     function handlePendingTouchMove(e) {
@@ -990,6 +1015,7 @@
       if (distance > DRAG_THRESHOLD && !pendingTouchDrag.moved) {
         // Movement detected - cancel long-press and start drag
         pendingTouchDrag.moved = true;
+        pendingTouchDrag.element.classList.remove('long-pressing');
 
         if (activeLongPressTimer) {
           clearTimeout(activeLongPressTimer);
@@ -1006,6 +1032,10 @@
       if (activeLongPressTimer) {
         clearTimeout(activeLongPressTimer);
         activeLongPressTimer = null;
+      }
+      // Clean up visual feedback
+      if (pendingTouchDrag?.element) {
+        pendingTouchDrag.element.classList.remove('long-pressing');
       }
       pendingTouchDrag = null;
 
@@ -1870,8 +1900,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.6.1';
-    const APP_UPDATED = '2026-01-20';
+    const APP_VERSION = '1.6.2';
+    const APP_UPDATED = '2026-01-26';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;
