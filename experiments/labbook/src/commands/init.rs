@@ -18,7 +18,7 @@ pub fn run() -> Result<()> {
     println!("Initializing lab in: {}", repo_root.display());
 
     // Prompt for lab directory
-    let lab_dir = prompt_lab_dir()?;
+    let lab_dir = prompt_lab_dir(&repo_name)?;
     let lab_dir_expanded = config::expand_path(&lab_dir);
 
     // Create lab directory if it doesn't exist
@@ -63,8 +63,9 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-fn prompt_lab_dir() -> Result<PathBuf> {
-    print!("Lab directory [~/lab-notes]: ");
+fn prompt_lab_dir(repo_name: &str) -> Result<PathBuf> {
+    let default_dir = format!("../{repo_name}-lab");
+    print!("Lab directory [{default_dir}]: ");
     io::stdout().flush()?;
 
     let mut input = String::new();
@@ -72,7 +73,7 @@ fn prompt_lab_dir() -> Result<PathBuf> {
     let input = input.trim();
 
     if input.is_empty() {
-        Ok(PathBuf::from("~/lab-notes"))
+        Ok(PathBuf::from(default_dir))
     } else {
         Ok(PathBuf::from(input))
     }

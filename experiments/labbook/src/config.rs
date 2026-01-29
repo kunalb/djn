@@ -22,7 +22,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            lab_dir: PathBuf::from("~/lab-notes"),
+            lab_dir: PathBuf::from("../lab"), // placeholder, set during init
             repo_name: String::new(),
             artifacts: Vec::new(),
             notes_template: default_notes_template(),
