@@ -6,13 +6,14 @@ Lab is a CLI tool for capturing experiment snapshots alongside code repositories
 
 ## Architecture
 
-Loosely coupled modules with dependencies flowing downward only:
+Two binaries sharing core modules:
 
 ```
-main.rs → commands → {config, git, experiment, artifacts, editor}
+lab (CLI)      → commands → {config, git, experiment, artifacts, editor}
+lab-view (Web) → routes   → {config, git, experiment, artifacts, render, github}
 ```
 
-### Core Modules (independent, no cross-dependencies)
+### Core Modules (shared, independent, no cross-dependencies)
 
 - **config** - Load/save `.lab/config.yaml`, validation
 - **git** - Git operations via shell (status, commit, branch detection)
@@ -20,9 +21,16 @@ main.rs → commands → {config, git, experiment, artifacts, editor}
 - **artifacts** - File copying, glob pattern matching
 - **editor** - `$EDITOR` invocation, change detection
 
-### Command Modules (compose core modules)
+### CLI Command Modules
 
 Each command in `src/commands/` implements one CLI subcommand.
+
+### View Modules (lab-view only)
+
+- **routes** - axum HTTP handlers
+- **render** - Markdown rendering, syntax highlighting
+- **github** - GitHub remote detection, commit/diff URL generation
+- **templates/** - askama HTML templates
 
 ## Principles
 
@@ -117,7 +125,7 @@ The bash tests should:
 
 ## Dependencies
 
-Minimal external dependencies:
+### Shared (both binaries)
 
 ```toml
 [dependencies]
@@ -129,20 +137,32 @@ chrono = { version = "0.4", features = ["serde"] }
 glob = "0.3"
 ```
 
+### View-only (lab-view binary)
+
+```toml
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+askama = "0.12"
+askama_axum = "0.4"
+syntect = "5"
+pulldown-cmark = "0.10"
+tower-http = { version = "0.5", features = ["fs"] }
+```
+
 Avoid adding dependencies unless strictly necessary. Justify any new dependency.
 
 ## Project Structure
 
 ```
 src/
-  main.rs              # CLI entry, clap setup
-  lib.rs               # Re-exports for integration tests
+  main.rs              # CLI entry (lab binary)
+  lib.rs               # Shared modules re-exported
   config.rs            # .lab/config.yaml
   git.rs               # Git shell operations
   experiment.rs        # Experiment data, meta.yaml
   artifacts.rs         # File copying, globs
   editor.rs            # $EDITOR handling
-  commands/
+  commands/            # CLI commands
     mod.rs
     init.rs
     open.rs
@@ -152,6 +172,20 @@ src/
     edit.rs
     close.rs
     list.rs
+  view/                # lab-view binary
+    main.rs            # Server entry, CLI args
+    routes.rs          # axum handlers
+    render.rs          # Markdown, syntax highlighting
+    github.rs          # GitHub URL detection
+    templates/
+      base.html        # Layout with htmx, pico.css
+      list.html        # Experiment table
+      detail.html      # Single experiment view
+      compare.html     # Multi-experiment comparison
+      partials/
+        artifact.html  # Artifact rendering by type
+        diff.html      # Git diff display
+        snapshot.html  # Snapshot row
 
 tests/
   e2e/
@@ -161,7 +195,7 @@ tests/
 
 ## Implementation Phases
 
-### Phase 1: Core Workflow
+### Phase 1: Core Workflow ✓ (Complete)
 - `lab init` - Setup `.lab/` config, initialize lab folder
 - `lab open [name]` - Create experiment, open editor
 - `lab status` - Show current experiment
@@ -169,12 +203,22 @@ tests/
 - `lab add <files>` - Add artifacts
 - `lab edit` - Edit notes
 - `lab close` - Close experiment
-- `lab list` - Simple list (fzf later)
+- `lab list` - Simple list
 
-### Phase 2: Enhanced Features
-- `lab view` - Web server for browsing (design incrementally)
+### Phase 2: Web View (`lab-view` binary)
+- Server setup with axum, CLI args (--port, --lab-dir)
+- List view: experiment table, sorting, filtering
+- Detail view: notes, snapshots, artifacts
+- Compare view: multi-experiment table
+- Artifact rendering by type (images, code, text)
+- Git diff display (shell out to git)
+- GitHub integration (detect remote, link to commits)
+- htmx for interactivity without JS framework
+
+### Phase 3: Enhanced Features (Future)
 - fzf integration for `lab list`
-- Additional filtering/search
+- Image diff slider in compare view
+- Export comparison to markdown
 
 ## Common Patterns
 
@@ -197,4 +241,80 @@ if status.is_dirty() {
 
 ```rust
 git::commit_in_repo(&lab_dir, &format!("open: {}", experiment_id))?;
+```
+
+## View Patterns (lab-view)
+
+### Route Handler
+
+```rust
+async fn list_experiments(
+    State(state): State<AppState>,
+    Query(params): Query<ListParams>,
+) -> impl IntoResponse {
+    let experiments = experiment::list_all(&state.lab_dir)?;
+    let template = ListTemplate { experiments, params };
+    Html(template.render()?)
+}
+```
+
+### Askama Template
+
+```rust
+#[derive(Template)]
+#[template(path = "list.html")]
+struct ListTemplate {
+    experiments: Vec<Experiment>,
+    params: ListParams,
+}
+```
+
+### Rendering Artifacts
+
+```rust
+pub fn render_artifact(name: &str, content: &[u8]) -> ArtifactHtml {
+    match extension(name) {
+        "png" | "jpg" | "gif" => ArtifactHtml::Image {
+            base64: base64::encode(content)
+        },
+        "yaml" | "json" | "toml" => ArtifactHtml::Code {
+            html: highlight_code(content, name)
+        },
+        "md" => ArtifactHtml::Markdown {
+            html: render_markdown(content)
+        },
+        _ => ArtifactHtml::Download { size: content.len() },
+    }
+}
+```
+
+### GitHub Detection
+
+```rust
+pub fn detect_github_remote(repo_path: &Path) -> Option<GitHubRepo> {
+    let url = git_remote_url(repo_path)?;
+    // Parse git@github.com:user/repo.git or https://github.com/user/repo
+    parse_github_url(&url)
+}
+
+pub fn commit_url(gh: &GitHubRepo, sha: &str) -> String {
+    format!("https://github.com/{}/{}/commit/{}", gh.owner, gh.repo, sha)
+}
+```
+
+### htmx Patterns
+
+```html
+<!-- Sortable column -->
+<th hx-get="/list?sort=date&order=desc" hx-target="#experiments">Date</th>
+
+<!-- Filter form -->
+<select hx-get="/list" hx-target="#experiments" name="tag">
+  <option value="">All tags</option>
+</select>
+
+<!-- Lazy-load diff -->
+<button hx-get="/diff/001/abc..def" hx-target="#diff-content">
+  View diff
+</button>
 ```

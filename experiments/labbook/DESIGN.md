@@ -141,12 +141,48 @@ Opens current experiment's `notes.md` in `$EDITOR`. If no experiment is open, la
 
 fzf-based picker showing all experiments. Filterable by tags, date, name. Selecting an experiment shows options: open (if closed), edit, view.
 
-### `lab view`
+### `lab-view` (separate binary)
 
-Starts local web server:
-- Table view of all experiments with sortable columns from frontmatter
-- Click row for detail view showing notes, artifacts, and git diff links
-- Can render diffs between source repo commits referenced in snapshots
+```bash
+lab-view [--port 3000] [--lab-dir path]
+```
+
+Starts local web server for browsing and comparing experiments. Separate binary to keep `lab` CLI minimal.
+
+**List View** (`/`):
+- Table of all experiments with sortable columns
+- Filter by tags, status, search
+- Checkboxes for multi-select comparison
+- Click row → detail view
+
+**Detail View** (`/exp/{id}`):
+- Notes rendered as markdown
+- Snapshot timeline with git diff links
+- GitHub commit links (auto-detected from remote)
+- Artifacts displayed inline by type
+
+**Compare View** (`/compare?ids=001,002,003`):
+- Multi-experiment comparison table
+- Experiments as columns, metadata/artifacts as rows
+- Side-by-side artifact display
+- Differing values highlighted
+
+**Artifact Rendering**:
+| Type | Display |
+|------|---------|
+| `.png`, `.jpg`, `.gif` | Inline image |
+| `.yaml`, `.json`, `.toml` | Syntax highlighted |
+| `.md`, `.txt` | Rendered text |
+| `.html` | Open in new tab |
+| Binary/unknown | Download link |
+
+**Stack**:
+- axum (web server)
+- htmx (interactivity without SPA)
+- pico.css (minimal styling)
+- askama (type-safe templates)
+- syntect (server-side syntax highlighting)
+- pulldown-cmark (markdown rendering)
 
 ## Lab Notebook Git Integration
 
