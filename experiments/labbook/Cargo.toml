@@ -1,0 +1,25 @@
+[package]
+name = "lab"
+version = "0.1.0"
+edition = "2021"
+description = "Experiment notebook CLI for capturing snapshots alongside code repositories"
+
+[workspace]
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+glob = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
