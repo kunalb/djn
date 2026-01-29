@@ -545,27 +545,63 @@
       bottom: 0;
       background: var(--overlay);
       z-index: 1000;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      padding-top: 12vh;
     }
     .edit-overlay.show { display: flex; }
     .edit-popup {
       background: var(--bg-card);
-      border: 1px solid var(--border-button);
-      border-radius: 4px;
-      padding: 16px;
-      width: 280px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 320px;
       max-width: 90vw;
-      box-shadow: 0 4px 12px var(--shadow-strong);
+      box-shadow: 0 8px 32px var(--shadow-strong);
+      overflow: hidden;
     }
-    .edit-popup h3 {
-      margin: 0 0 16px 0;
+    .edit-popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .edit-popup-header h3 {
+      margin: 0;
       font-size: 13px;
       font-weight: 600;
       color: var(--text-strong);
     }
+    .edit-popup-header-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .edit-header-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 3px;
+      line-height: 1;
+    }
+    .edit-header-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .edit-header-btn.danger:hover {
+      background: rgba(201, 70, 44, 0.1);
+      color: var(--accent-red);
+    }
+    .edit-popup-body {
+      padding: 16px;
+    }
     .edit-field {
       margin-bottom: 12px;
+    }
+    .edit-field:last-child {
+      margin-bottom: 0;
     }
     .edit-field label {
       display: block;
@@ -578,11 +614,11 @@
     .edit-field input,
     .edit-field textarea {
       width: 100%;
-      padding: 8px;
+      padding: 8px 10px;
       border: 1px solid var(--border);
-      border-radius: 3px;
+      border-radius: 4px;
       font-family: inherit;
-      font-size: 12px;
+      font-size: 13px;
       background: var(--bg-primary);
       color: var(--text-primary);
     }
@@ -590,10 +626,12 @@
     .edit-field textarea:focus {
       outline: none;
       border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(122, 158, 194, 0.15);
     }
     .edit-field textarea {
       resize: vertical;
       min-height: 60px;
+      line-height: 1.4;
     }
     .edit-row {
       display: flex;
@@ -602,52 +640,45 @@
     .edit-row .edit-field {
       flex: 1;
     }
-    .edit-actions {
+    .edit-popup-footer {
       display: flex;
-      gap: 8px;
-      margin-top: 16px;
-      justify-content: space-between;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+      background: var(--bg-secondary);
     }
-    .edit-actions-left {
-      display: flex;
-      gap: 8px;
-    }
-    .edit-btn {
-      padding: 8px 12px;
-      border: 1px solid var(--border-button);
-      border-radius: 3px;
-      font-family: inherit;
-      font-size: 11px;
+    .edit-link-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
       cursor: pointer;
-      background: var(--bg-card);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 8px;
+    }
+    .edit-link-btn:hover {
       color: var(--text-primary);
     }
-    .edit-btn:hover {
-      background: var(--bg-hover);
+    .edit-save-btn {
+      background: var(--text-primary);
+      border: none;
+      color: var(--bg-card);
+      padding: 8px 20px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
     }
-    .edit-btn.primary {
-      background: var(--accent-blue);
-      border-color: var(--accent-blue);
-      color: white;
-    }
-    .edit-btn.primary:hover {
+    .edit-save-btn:hover {
       opacity: 0.9;
     }
-    .edit-btn.danger {
-      color: var(--accent-red);
-      border-color: var(--accent-red);
-    }
-    .edit-btn.danger:hover {
-      background: var(--accent-red);
-      color: white;
-    }
-    .edit-btn.duplicate {
-      color: var(--accent-green);
-      border-color: var(--accent-green);
-    }
-    .edit-btn.duplicate:hover {
-      background: var(--accent-green);
-      color: white;
+    .edit-shortcut-hint {
+      font-size: 10px;
+      color: var(--text-faint);
+      margin-right: auto;
     }
 
     /* Current time indicator */
@@ -669,6 +700,182 @@
       height: 7px;
       background: var(--accent-red);
       border-radius: 50%;
+    }
+
+    /* Keyboard navigation - selected entry */
+    .entry.selected {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: -1px;
+      z-index: 10;
+    }
+    .entry.selected.plan {
+      outline-color: var(--accent-green-soft);
+    }
+
+    /* Active zone indicator */
+    .column-header.active {
+      background: var(--accent-blue);
+      color: white;
+    }
+    .column-header.active.plan-active {
+      background: var(--accent-green-soft);
+    }
+    .notes-header.active {
+      background: var(--text-muted);
+      color: white;
+    }
+
+    /* Command palette */
+    .command-palette-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--overlay);
+      z-index: 2000;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+    }
+    .command-palette-overlay.show { display: flex; }
+    .command-palette {
+      background: var(--bg-card);
+      border: 1px solid var(--border-button);
+      border-radius: 6px;
+      width: 400px;
+      max-width: 90vw;
+      box-shadow: 0 8px 32px var(--shadow-strong);
+      overflow: hidden;
+    }
+    .command-palette-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      outline: none;
+    }
+    .command-palette-input::placeholder {
+      color: var(--text-muted);
+    }
+    .command-palette-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .command-palette-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .command-palette-item:last-child {
+      border-bottom: none;
+    }
+    .command-palette-item:hover,
+    .command-palette-item.selected {
+      background: var(--bg-hover);
+    }
+    .command-palette-item.selected {
+      background: var(--accent-blue);
+      color: white;
+    }
+    .command-palette-item-label {
+      font-size: 13px;
+    }
+    .command-palette-item-shortcut {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .command-palette-item.selected .command-palette-item-shortcut {
+      background: rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.9);
+    }
+    .command-palette-empty {
+      padding: 20px 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* Shortcuts help overlay */
+    .shortcuts-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--overlay);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .shortcuts-overlay.show { display: flex; }
+    .shortcuts-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-button);
+      border-radius: 6px;
+      padding: 20px 24px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px var(--shadow-strong);
+    }
+    .shortcuts-modal h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+    .shortcuts-section {
+      margin-bottom: 16px;
+    }
+    .shortcuts-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 0 0 8px 0;
+    }
+    .shortcuts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 24px;
+    }
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .shortcut-keys {
+      font-size: 11px;
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+    .shortcut-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .shortcuts-footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
     }
   </style>
 </head>
@@ -699,32 +906,101 @@
     </div>
   </div>
 
+  <!-- Command Palette -->
+  <div class="command-palette-overlay" id="commandPaletteOverlay" onclick="hideCommandPalette(event)">
+    <div class="command-palette" onclick="event.stopPropagation()">
+      <input type="text" class="command-palette-input" id="commandPaletteInput" placeholder="Type a command..." autocomplete="off">
+      <div class="command-palette-list" id="commandPaletteList"></div>
+    </div>
+  </div>
+
+  <!-- Shortcuts Help -->
+  <div class="shortcuts-overlay" id="shortcutsOverlay" onclick="hideShortcutsHelp(event)">
+    <div class="shortcuts-modal" onclick="event.stopPropagation()">
+      <h3>Keyboard Shortcuts</h3>
+      <div class="shortcuts-section">
+        <h4>Navigation</h4>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-keys">j / Down</span><span class="shortcut-desc">Next entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">k / Up</span><span class="shortcut-desc">Previous entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">h / Left</span><span class="shortcut-desc">Plans column</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">l / Right</span><span class="shortcut-desc">Actual column</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">g g / Home</span><span class="shortcut-desc">First entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">G / End</span><span class="shortcut-desc">Last entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Tab</span><span class="shortcut-desc">Next zone</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Shift+Tab</span><span class="shortcut-desc">Previous zone</span></div>
+        </div>
+      </div>
+      <div class="shortcuts-section">
+        <h4>Date Navigation</h4>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-keys">H / [</span><span class="shortcut-desc">Previous day</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">L / ]</span><span class="shortcut-desc">Next day</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">t</span><span class="shortcut-desc">Go to today</span></div>
+        </div>
+      </div>
+      <div class="shortcuts-section">
+        <h4>Entry Actions</h4>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-keys">n</span><span class="shortcut-desc">New entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Enter / e</span><span class="shortcut-desc">Edit entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">d / Del</span><span class="shortcut-desc">Delete entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">c</span><span class="shortcut-desc">Copy to other column</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">y</span><span class="shortcut-desc">Yank (copy) entry</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">p</span><span class="shortcut-desc">Paste entry</span></div>
+        </div>
+      </div>
+      <div class="shortcuts-section">
+        <h4>Time Adjustments (with entry selected)</h4>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-keys">Shift+k / Shift+Up</span><span class="shortcut-desc">Move up 15 min</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Shift+j / Shift+Down</span><span class="shortcut-desc">Move down 15 min</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Shift+[</span><span class="shortcut-desc">Shrink 15 min</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Shift+]</span><span class="shortcut-desc">Grow 15 min</span></div>
+        </div>
+      </div>
+      <div class="shortcuts-section">
+        <h4>Global</h4>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-keys">Ctrl/Cmd+K</span><span class="shortcut-desc">Command palette</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Space</span><span class="shortcut-desc">Toggle pomodoro</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">Escape</span><span class="shortcut-desc">Close/deselect</span></div>
+          <div class="shortcut-row"><span class="shortcut-keys">?</span><span class="shortcut-desc">Show this help</span></div>
+        </div>
+      </div>
+      <div class="shortcuts-footer">Press Escape or ? to close</div>
+    </div>
+  </div>
+
   <div class="edit-overlay" id="editOverlay" onclick="hideEditPopup(event)">
     <div class="edit-popup" onclick="event.stopPropagation()">
-      <h3 id="editPopupTitle">Edit Entry</h3>
-      <div class="edit-row">
-        <div class="edit-field">
-          <label for="editStartTime">Start Time</label>
-          <input type="time" id="editStartTime">
-        </div>
-        <div class="edit-field">
-          <label for="editDuration">Duration (min)</label>
-          <input type="number" id="editDuration" min="15" step="15">
+      <div class="edit-popup-header">
+        <h3 id="editPopupTitle">Edit Entry</h3>
+        <div class="edit-popup-header-actions">
+          <button class="edit-header-btn" id="duplicateBtn" onclick="duplicateFromPopup()" title="Copy to Actual">&#8594;</button>
+          <button class="edit-header-btn danger" onclick="deleteFromPopup()" title="Delete">&times;</button>
         </div>
       </div>
-      <div class="edit-field">
-        <label for="editText">Description</label>
-        <textarea id="editText"></textarea>
+      <div class="edit-popup-body">
+        <div class="edit-row">
+          <div class="edit-field">
+            <label for="editStartTime">Start</label>
+            <input type="time" id="editStartTime">
+          </div>
+          <div class="edit-field">
+            <label for="editDuration">Duration</label>
+            <input type="number" id="editDuration" min="15" step="15" placeholder="min">
+          </div>
+        </div>
+        <div class="edit-field">
+          <label for="editText">Description</label>
+          <textarea id="editText" placeholder="What are you working on?"></textarea>
+        </div>
       </div>
-      <div class="edit-actions">
-        <div class="edit-actions-left">
-          <button class="edit-btn danger" onclick="deleteFromPopup()">Delete</button>
-          <button class="edit-btn duplicate" id="duplicateBtn" onclick="duplicateFromPopup()">To Actual</button>
-        </div>
-        <div>
-          <button class="edit-btn" onclick="hideEditPopup()">Cancel</button>
-          <button class="edit-btn primary" onclick="saveEditPopup()">Save</button>
-        </div>
+      <div class="edit-popup-footer">
+        <span class="edit-shortcut-hint">Enter to save</span>
+        <button class="edit-link-btn" onclick="hideEditPopup()">Cancel</button>
+        <button class="edit-save-btn" onclick="saveEditPopup()">Save</button>
       </div>
     </div>
   </div>
@@ -818,6 +1094,18 @@
       renderPomodoroGutter();
       renderNotes();
       renderCurrentTimeLine();
+
+      // Restore keyboard selection state
+      if (keyboard.selectedEntryId) {
+        const el = document.querySelector(`[data-id="${keyboard.selectedEntryId}"]`);
+        if (el) {
+          el.classList.add('selected');
+        } else {
+          // Entry no longer exists
+          keyboard.selectedEntryId = null;
+        }
+      }
+      updateZoneIndicators();
     }
 
     function renderTimeline(type, containerId) {
@@ -1257,7 +1545,7 @@
 
       // Show/hide duplicate button (only for plans)
       document.getElementById('duplicateBtn').style.display =
-        type === 'plans' ? 'inline-block' : 'none';
+        type === 'plans' ? '' : 'none';
 
       // Populate fields
       const startTime = formatTime(entry.hour, entry.minutes);
@@ -1266,6 +1554,12 @@
       document.getElementById('editText').value = entry.text || '';
 
       document.getElementById('editOverlay').classList.add('show');
+
+      // Focus on start time field
+      setTimeout(() => {
+        document.getElementById('editStartTime').focus();
+        document.getElementById('editStartTime').select();
+      }, 10);
     }
 
     function hideEditPopup(e) {
@@ -1900,8 +2194,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.6.2';
-    const APP_UPDATED = '2026-01-26';
+    const APP_VERSION = '1.7.1';
+    const APP_UPDATED = '2026-01-29';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;
@@ -1969,6 +2263,675 @@
     // Apply theme on load
     applyTheme(getStoredTheme());
 
+    // ============ KEYBOARD NAVIGATION ============
+    const keyboard = {
+      focusZone: 'plans', // 'plans' | 'actuals' | 'notes'
+      selectedEntryId: null,
+      yankBuffer: null,
+      pendingKey: null, // For multi-key sequences like 'gg'
+      pendingKeyTimeout: null
+    };
+
+    function isInputFocused() {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return true;
+      if (el.isContentEditable) return true;
+      return false;
+    }
+
+    function isModalOpen() {
+      return document.getElementById('editOverlay').classList.contains('show') ||
+             document.getElementById('versionOverlay').classList.contains('show') ||
+             document.getElementById('commandPaletteOverlay').classList.contains('show') ||
+             document.getElementById('shortcutsOverlay').classList.contains('show');
+    }
+
+    function getEntriesSorted(type) {
+      const dayData = getDayData();
+      const entries = [...(dayData[type] || [])];
+      entries.sort((a, b) => {
+        const aMin = a.hour * 60 + a.minutes;
+        const bMin = b.hour * 60 + b.minutes;
+        return aMin - bMin;
+      });
+      return entries;
+    }
+
+    function selectEntry(id, type) {
+      deselectEntry();
+      keyboard.selectedEntryId = id;
+      keyboard.focusZone = type;
+      const el = document.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.classList.add('selected');
+        scrollEntryIntoView(el);
+      }
+      updateZoneIndicators();
+    }
+
+    function deselectEntry() {
+      if (keyboard.selectedEntryId) {
+        const el = document.querySelector(`[data-id="${keyboard.selectedEntryId}"]`);
+        if (el) el.classList.remove('selected');
+      }
+      keyboard.selectedEntryId = null;
+    }
+
+    function scrollEntryIntoView(el) {
+      const column = el.closest('.timeline-column');
+      if (!column) return;
+      const colRect = column.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const headerHeight = 30; // Approximate header height
+
+      if (elRect.top < colRect.top + headerHeight) {
+        column.scrollTop -= (colRect.top + headerHeight - elRect.top + 10);
+      } else if (elRect.bottom > colRect.bottom) {
+        column.scrollTop += (elRect.bottom - colRect.bottom + 10);
+      }
+    }
+
+    function updateZoneIndicators() {
+      // Remove all active indicators
+      document.querySelectorAll('.column-header, .notes-header').forEach(h => {
+        h.classList.remove('active', 'plan-active');
+      });
+
+      // Add active indicator to current zone
+      if (keyboard.focusZone === 'plans') {
+        const header = document.querySelector('#plansColumn .column-header');
+        if (header) {
+          header.classList.add('active', 'plan-active');
+        }
+      } else if (keyboard.focusZone === 'actuals') {
+        const header = document.querySelector('#actualsColumn .column-header');
+        if (header) header.classList.add('active');
+      } else if (keyboard.focusZone === 'notes') {
+        const header = document.querySelector('.notes-header');
+        if (header) header.classList.add('active');
+      }
+    }
+
+    function selectNextEntry() {
+      const type = keyboard.focusZone;
+      if (type === 'notes') return;
+
+      const entries = getEntriesSorted(type);
+      if (entries.length === 0) return;
+
+      if (!keyboard.selectedEntryId) {
+        selectEntry(entries[0].id, type);
+        return;
+      }
+
+      const currentIdx = entries.findIndex(e => e.id === keyboard.selectedEntryId);
+      const nextIdx = Math.min(entries.length - 1, currentIdx + 1);
+      selectEntry(entries[nextIdx].id, type);
+    }
+
+    function selectPrevEntry() {
+      const type = keyboard.focusZone;
+      if (type === 'notes') return;
+
+      const entries = getEntriesSorted(type);
+      if (entries.length === 0) return;
+
+      if (!keyboard.selectedEntryId) {
+        selectEntry(entries[entries.length - 1].id, type);
+        return;
+      }
+
+      const currentIdx = entries.findIndex(e => e.id === keyboard.selectedEntryId);
+      const prevIdx = Math.max(0, currentIdx - 1);
+      selectEntry(entries[prevIdx].id, type);
+    }
+
+    function selectFirstEntry() {
+      const type = keyboard.focusZone;
+      if (type === 'notes') return;
+
+      const entries = getEntriesSorted(type);
+      if (entries.length === 0) return;
+      selectEntry(entries[0].id, type);
+    }
+
+    function selectLastEntry() {
+      const type = keyboard.focusZone;
+      if (type === 'notes') return;
+
+      const entries = getEntriesSorted(type);
+      if (entries.length === 0) return;
+      selectEntry(entries[entries.length - 1].id, type);
+    }
+
+    function switchZone(zone) {
+      deselectEntry();
+      keyboard.focusZone = zone;
+      updateZoneIndicators();
+
+      if (zone === 'notes') {
+        document.getElementById('notesContent').focus();
+      } else {
+        // Select first entry in the new zone, or just update indicator
+        const entries = getEntriesSorted(zone);
+        if (entries.length > 0) {
+          selectEntry(entries[0].id, zone);
+        }
+      }
+    }
+
+    function cycleZone(reverse = false) {
+      const zones = ['plans', 'actuals', 'notes'];
+      const currentIdx = zones.indexOf(keyboard.focusZone);
+      let nextIdx;
+      if (reverse) {
+        nextIdx = (currentIdx - 1 + zones.length) % zones.length;
+      } else {
+        nextIdx = (currentIdx + 1) % zones.length;
+      }
+      switchZone(zones[nextIdx]);
+    }
+
+    function newEntryAtCurrentTime() {
+      const type = keyboard.focusZone === 'notes' ? 'plans' : keyboard.focusZone;
+      const now = new Date();
+      const hour = now.getHours();
+      const minutes = Math.floor(now.getMinutes() / 15) * 15;
+
+      // Create entry and show edit popup
+      const dayData = getDayData();
+      const entry = {
+        id: type.charAt(0) + '_' + Date.now(),
+        hour,
+        minutes,
+        durationMins: 30,
+        text: ''
+      };
+      dayData[type].push(entry);
+      saveAllData();
+      render();
+
+      // Show edit popup for the new entry
+      showEditPopup(entry, type);
+    }
+
+    function editSelectedEntry() {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      const dayData = getDayData();
+      const entry = dayData[type]?.find(e => e.id === keyboard.selectedEntryId);
+      if (entry) {
+        showEditPopup(entry, type);
+      }
+    }
+
+    function deleteSelectedEntry() {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      const id = keyboard.selectedEntryId;
+
+      // Find next entry to select
+      const entries = getEntriesSorted(type);
+      const currentIdx = entries.findIndex(e => e.id === id);
+
+      // Delete the entry
+      const dayData = getDayData();
+      dayData[type] = dayData[type].filter(e => e.id !== id);
+      saveAllData();
+
+      keyboard.selectedEntryId = null;
+      render();
+
+      // Select next/prev entry if available
+      const newEntries = getEntriesSorted(type);
+      if (newEntries.length > 0) {
+        const newIdx = Math.min(currentIdx, newEntries.length - 1);
+        selectEntry(newEntries[newIdx].id, type);
+      }
+    }
+
+    function yankSelectedEntry() {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      const dayData = getDayData();
+      const entry = dayData[type]?.find(e => e.id === keyboard.selectedEntryId);
+      if (entry) {
+        keyboard.yankBuffer = { ...entry, sourceType: type };
+      }
+    }
+
+    function pasteEntry() {
+      if (!keyboard.yankBuffer) return;
+      const type = keyboard.focusZone === 'notes' ? 'plans' : keyboard.focusZone;
+      const dayData = getDayData();
+
+      const newEntry = {
+        id: type.charAt(0) + '_' + Date.now(),
+        hour: keyboard.yankBuffer.hour,
+        minutes: keyboard.yankBuffer.minutes,
+        durationMins: keyboard.yankBuffer.durationMins,
+        text: keyboard.yankBuffer.text
+      };
+      dayData[type].push(newEntry);
+      saveAllData();
+      render();
+      selectEntry(newEntry.id, type);
+    }
+
+    function copyToOtherColumn() {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      if (type === 'notes') return;
+
+      const dayData = getDayData();
+      const entry = dayData[type]?.find(e => e.id === keyboard.selectedEntryId);
+      if (!entry) return;
+
+      const targetType = type === 'plans' ? 'actuals' : 'plans';
+      const newEntry = {
+        id: targetType.charAt(0) + '_' + Date.now(),
+        hour: entry.hour,
+        minutes: entry.minutes,
+        durationMins: entry.durationMins,
+        text: entry.text
+      };
+      dayData[targetType].push(newEntry);
+      saveAllData();
+      render();
+    }
+
+    function moveSelectedEntry(deltaMins) {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      const dayData = getDayData();
+      const entry = dayData[type]?.find(e => e.id === keyboard.selectedEntryId);
+      if (!entry) return;
+
+      const currentMins = entry.hour * 60 + entry.minutes;
+      const newMins = Math.max(0, Math.min(24 * 60 - entry.durationMins, currentMins + deltaMins));
+      entry.hour = Math.floor(newMins / 60);
+      entry.minutes = newMins % 60;
+
+      saveAllData();
+      render();
+      selectEntry(entry.id, type);
+    }
+
+    function resizeSelectedEntry(deltaMins) {
+      if (!keyboard.selectedEntryId) return;
+      const type = keyboard.focusZone;
+      const dayData = getDayData();
+      const entry = dayData[type]?.find(e => e.id === keyboard.selectedEntryId);
+      if (!entry) return;
+
+      const entryStartMins = entry.hour * 60 + entry.minutes;
+      const maxDuration = 24 * 60 - entryStartMins;
+      entry.durationMins = Math.max(15, Math.min(maxDuration, entry.durationMins + deltaMins));
+
+      saveAllData();
+      render();
+      selectEntry(entry.id, type);
+    }
+
+    function goToToday() {
+      state.currentDate = getTodayStr();
+      render();
+      scrollToCurrentTime();
+    }
+
+    // ============ COMMAND PALETTE ============
+    const commands = [
+      { id: 'new-plan', label: 'New plan entry', shortcut: 'n', action: () => { keyboard.focusZone = 'plans'; newEntryAtCurrentTime(); } },
+      { id: 'new-actual', label: 'New actual entry', shortcut: 'n', action: () => { keyboard.focusZone = 'actuals'; newEntryAtCurrentTime(); } },
+      { id: 'today', label: 'Go to today', shortcut: 't', action: goToToday },
+      { id: 'prev-day', label: 'Previous day', shortcut: '[', action: () => changeDay(-1) },
+      { id: 'next-day', label: 'Next day', shortcut: ']', action: () => changeDay(1) },
+      { id: 'pomodoro', label: 'Toggle pomodoro', shortcut: 'Space', action: togglePomodoro },
+      { id: 'export-today', label: 'Export today', shortcut: '', action: exportAsText },
+      { id: 'export-all', label: 'Export all days', shortcut: '', action: exportAllDays },
+      { id: 'import', label: 'Import data', shortcut: '', action: () => document.getElementById('importFile').click() },
+      { id: 'theme', label: 'Toggle theme', shortcut: '', action: toggleTheme },
+      { id: 'shortcuts', label: 'Show keyboard shortcuts', shortcut: '?', action: showShortcutsHelp },
+      { id: 'plans-col', label: 'Go to Plans column', shortcut: 'h', action: () => switchZone('plans') },
+      { id: 'actual-col', label: 'Go to Actual column', shortcut: 'l', action: () => switchZone('actuals') },
+      { id: 'notes', label: 'Go to Notes', shortcut: 'Tab', action: () => switchZone('notes') },
+    ];
+
+    let commandPaletteSelectedIdx = 0;
+    let filteredCommands = [];
+
+    function fuzzyMatch(query, text) {
+      query = query.toLowerCase();
+      text = text.toLowerCase();
+      let qi = 0;
+      for (let ti = 0; ti < text.length && qi < query.length; ti++) {
+        if (text[ti] === query[qi]) qi++;
+      }
+      return qi === query.length;
+    }
+
+    function showCommandPalette() {
+      const overlay = document.getElementById('commandPaletteOverlay');
+      const input = document.getElementById('commandPaletteInput');
+
+      overlay.classList.add('show');
+      input.value = '';
+      input.focus();
+      commandPaletteSelectedIdx = 0;
+      renderCommandPaletteList('');
+    }
+
+    function hideCommandPalette(e) {
+      if (!e || e.target === document.getElementById('commandPaletteOverlay')) {
+        document.getElementById('commandPaletteOverlay').classList.remove('show');
+      }
+    }
+
+    function renderCommandPaletteList(query) {
+      const list = document.getElementById('commandPaletteList');
+
+      if (query) {
+        filteredCommands = commands.filter(cmd => fuzzyMatch(query, cmd.label));
+      } else {
+        filteredCommands = [...commands];
+      }
+
+      if (filteredCommands.length === 0) {
+        list.innerHTML = '<div class="command-palette-empty">No matching commands</div>';
+        return;
+      }
+
+      commandPaletteSelectedIdx = Math.min(commandPaletteSelectedIdx, filteredCommands.length - 1);
+
+      list.innerHTML = filteredCommands.map((cmd, idx) => `
+        <div class="command-palette-item${idx === commandPaletteSelectedIdx ? ' selected' : ''}" data-idx="${idx}">
+          <span class="command-palette-item-label">${escapeHtml(cmd.label)}</span>
+          ${cmd.shortcut ? `<span class="command-palette-item-shortcut">${escapeHtml(cmd.shortcut)}</span>` : ''}
+        </div>
+      `).join('');
+
+      // Click handlers
+      list.querySelectorAll('.command-palette-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const idx = parseInt(item.dataset.idx);
+          executeCommand(filteredCommands[idx]);
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function executeCommand(cmd) {
+      hideCommandPalette();
+      cmd.action();
+    }
+
+    // Command palette input handler
+    document.getElementById('commandPaletteInput').addEventListener('input', (e) => {
+      commandPaletteSelectedIdx = 0;
+      renderCommandPaletteList(e.target.value);
+    });
+
+    document.getElementById('commandPaletteInput').addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        commandPaletteSelectedIdx = Math.min(filteredCommands.length - 1, commandPaletteSelectedIdx + 1);
+        renderCommandPaletteList(e.target.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        commandPaletteSelectedIdx = Math.max(0, commandPaletteSelectedIdx - 1);
+        renderCommandPaletteList(e.target.value);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (filteredCommands[commandPaletteSelectedIdx]) {
+          executeCommand(filteredCommands[commandPaletteSelectedIdx]);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideCommandPalette();
+      }
+    });
+
+    // ============ SHORTCUTS HELP ============
+    function showShortcutsHelp() {
+      document.getElementById('shortcutsOverlay').classList.add('show');
+    }
+
+    function hideShortcutsHelp(e) {
+      if (!e || e.target === document.getElementById('shortcutsOverlay')) {
+        document.getElementById('shortcutsOverlay').classList.remove('show');
+      }
+    }
+
+    // ============ MAIN KEYBOARD HANDLER ============
+    document.addEventListener('keydown', (e) => {
+      const key = e.key;
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+
+      // Command palette: Ctrl/Cmd + K
+      if (ctrl && key.toLowerCase() === 'k') {
+        e.preventDefault();
+        showCommandPalette();
+        return;
+      }
+
+      // Close modals with Escape
+      if (key === 'Escape') {
+        if (document.getElementById('commandPaletteOverlay').classList.contains('show')) {
+          hideCommandPalette();
+          return;
+        }
+        if (document.getElementById('shortcutsOverlay').classList.contains('show')) {
+          hideShortcutsHelp();
+          return;
+        }
+        if (document.getElementById('editOverlay').classList.contains('show')) {
+          hideEditPopup();
+          return;
+        }
+        if (document.getElementById('versionOverlay').classList.contains('show')) {
+          hideVersionInfo();
+          return;
+        }
+        // Deselect entry
+        if (keyboard.selectedEntryId) {
+          deselectEntry();
+          updateZoneIndicators();
+          return;
+        }
+        return;
+      }
+
+      // Don't process other shortcuts if modal is open or input focused
+      if (isModalOpen()) return;
+      if (isInputFocused()) {
+        // Allow Tab to exit notes
+        if (key === 'Tab' && keyboard.focusZone === 'notes') {
+          e.preventDefault();
+          document.getElementById('notesContent').blur();
+          cycleZone(shift);
+        }
+        return;
+      }
+
+      // Clear pending key after timeout
+      if (keyboard.pendingKeyTimeout) {
+        clearTimeout(keyboard.pendingKeyTimeout);
+        keyboard.pendingKeyTimeout = null;
+      }
+
+      // Handle multi-key sequences (gg)
+      if (keyboard.pendingKey === 'g' && key === 'g') {
+        e.preventDefault();
+        keyboard.pendingKey = null;
+        selectFirstEntry();
+        return;
+      }
+
+      // Start multi-key sequence
+      if (key === 'g' && !shift && !ctrl) {
+        keyboard.pendingKey = 'g';
+        keyboard.pendingKeyTimeout = setTimeout(() => {
+          keyboard.pendingKey = null;
+        }, 500);
+        return;
+      }
+
+      keyboard.pendingKey = null;
+
+      // Navigation
+      if (key === 'j' || (key === 'ArrowDown' && !shift)) {
+        e.preventDefault();
+        selectNextEntry();
+        return;
+      }
+      if (key === 'k' || (key === 'ArrowUp' && !shift)) {
+        e.preventDefault();
+        selectPrevEntry();
+        return;
+      }
+      if ((key === 'h' || key === 'ArrowLeft') && !shift) {
+        e.preventDefault();
+        switchZone('plans');
+        return;
+      }
+      if ((key === 'l' || key === 'ArrowRight') && !shift && keyboard.focusZone !== 'notes') {
+        e.preventDefault();
+        switchZone('actuals');
+        return;
+      }
+      if (key === 'G' && shift) {
+        e.preventDefault();
+        selectLastEntry();
+        return;
+      }
+      if (key === 'Home') {
+        e.preventDefault();
+        selectFirstEntry();
+        return;
+      }
+      if (key === 'End') {
+        e.preventDefault();
+        selectLastEntry();
+        return;
+      }
+      if (key === 'Tab') {
+        e.preventDefault();
+        cycleZone(shift);
+        return;
+      }
+
+      // Date navigation
+      if ((key === 'H' && shift) || key === '[') {
+        e.preventDefault();
+        changeDay(-1);
+        return;
+      }
+      if ((key === 'L' && shift) || key === ']') {
+        e.preventDefault();
+        changeDay(1);
+        return;
+      }
+      if (key === 't' && !ctrl) {
+        e.preventDefault();
+        goToToday();
+        return;
+      }
+
+      // Entry actions
+      if (key === 'n' && !ctrl) {
+        e.preventDefault();
+        newEntryAtCurrentTime();
+        return;
+      }
+      if (key === 'Enter' || key === 'e') {
+        if (keyboard.selectedEntryId) {
+          e.preventDefault();
+          editSelectedEntry();
+        }
+        return;
+      }
+      if ((key === 'd' || key === 'Delete' || key === 'Backspace') && !ctrl) {
+        if (keyboard.selectedEntryId) {
+          e.preventDefault();
+          deleteSelectedEntry();
+        }
+        return;
+      }
+      if (key === 'y' && !ctrl) {
+        e.preventDefault();
+        yankSelectedEntry();
+        return;
+      }
+      if (key === 'p' && !ctrl) {
+        e.preventDefault();
+        pasteEntry();
+        return;
+      }
+      if (key === 'c' && !ctrl) {
+        e.preventDefault();
+        copyToOtherColumn();
+        return;
+      }
+
+      // Time adjustments with Shift
+      if (shift && (key === 'ArrowUp' || key === 'K')) {
+        e.preventDefault();
+        moveSelectedEntry(-15);
+        return;
+      }
+      if (shift && (key === 'ArrowDown' || key === 'J')) {
+        e.preventDefault();
+        moveSelectedEntry(15);
+        return;
+      }
+      if (shift && key === '{') {
+        e.preventDefault();
+        resizeSelectedEntry(-15);
+        return;
+      }
+      if (shift && key === '}') {
+        e.preventDefault();
+        resizeSelectedEntry(15);
+        return;
+      }
+
+      // Global actions
+      if (key === ' ') {
+        e.preventDefault();
+        togglePomodoro();
+        return;
+      }
+      if (key === '?' && shift) {
+        e.preventDefault();
+        showShortcutsHelp();
+        return;
+      }
+    });
+
+    // Handle keyboard in edit popup
+    document.getElementById('editOverlay').addEventListener('keydown', (e) => {
+      // Cmd/Ctrl+Enter always saves
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveEditPopup();
+        return;
+      }
+      // Enter saves from time/duration fields (not textarea)
+      if (e.key === 'Enter' && e.target.tagName.toLowerCase() === 'input') {
+        e.preventDefault();
+        saveEditPopup();
+        return;
+      }
+    });
+
     // ============ INIT ============
     function restoreActivePomodoro() {
       // Check all days for an active pomodoro
@@ -2017,6 +2980,9 @@
       setupScrollSync();
       scrollToCurrentTime();
       registerServiceWorker();
+
+      // Initialize keyboard navigation state
+      updateZoneIndicators();
 
       // Update time line every minute
       setInterval(renderCurrentTimeLine, 60000);
