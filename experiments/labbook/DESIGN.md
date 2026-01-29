@@ -155,6 +155,8 @@ The lab folder is a git repository. Options during `lab init`:
 1. **Separate repository** (default): `~/lab-notes/` as standalone repo
 2. **Orphan branch**: Lab notes in `lab-notes` branch of the source repo itself
 
+If the configured lab folder doesn't exist, offer to create it as an orphan branch of the current repository. The branch name is derived from the current branch (e.g., `main` → `main-lab`, `feature/foo` → `feature/foo-lab`). This keeps experiments alongside code without polluting the main history.
+
 Benefits of auto-committing:
 - Full history of all experiment changes
 - Can see when notes were edited, artifacts updated
