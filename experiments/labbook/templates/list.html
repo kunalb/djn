@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Experiments - Lab{% endblock %}
+
+{% block content %}
+<h1>Experiments</h1>
+
+<form class="filters" hx-get="/list" hx-target="#experiments" hx-trigger="change, keyup delay:300ms from:input[type='search']">
+    <input type="search" name="q" placeholder="Search..." value="{{ params.q.as_deref().unwrap_or("") }}">
+
+    <select name="tag">
+        <option value="">All tags</option>
+        {% for tag in all_tags %}
+        <option value="{{ tag }}" {% if params.tag.as_deref() == Some(tag.as_str()) %}selected{% endif %}>{{ tag }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="status">
+        <option value="">All status</option>
+        <option value="open" {% if params.status.as_deref() == Some("open") %}selected{% endif %}>Open</option>
+        <option value="closed" {% if params.status.as_deref() == Some("closed") %}selected{% endif %}>Closed</option>
+    </select>
+</form>
+
+<form action="/compare" method="get">
+    <div id="experiments">
+        {% include "list_partial.html" %}
+    </div>
+
+    <button type="submit">Compare Selected</button>
+</form>
+{% endblock %}

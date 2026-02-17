@@ -1,0 +1,44 @@
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th hx-get="/list?sort=date&order={% if params.sort.as_deref() == Some("date") && params.order.as_deref() != Some("asc") %}asc{% else %}desc{% endif %}" hx-target="#experiments">
+                Date {% if params.sort.as_deref() == Some("date") || params.sort.is_none() %}{% if params.order.as_deref() == Some("asc") %}↑{% else %}↓{% endif %}{% endif %}
+            </th>
+            <th hx-get="/list?sort=name&order={% if params.sort.as_deref() == Some("name") && params.order.as_deref() != Some("asc") %}asc{% else %}desc{% endif %}" hx-target="#experiments">
+                Name {% if params.sort.as_deref() == Some("name") %}{% if params.order.as_deref() == Some("asc") %}↑{% else %}↓{% endif %}{% endif %}
+            </th>
+            <th hx-get="/list?sort=status&order={% if params.sort.as_deref() == Some("status") && params.order.as_deref() != Some("asc") %}asc{% else %}desc{% endif %}" hx-target="#experiments">
+                Status {% if params.sort.as_deref() == Some("status") %}{% if params.order.as_deref() == Some("asc") %}↑{% else %}↓{% endif %}{% endif %}
+            </th>
+            <th>Tags</th>
+            <th hx-get="/list?sort=snapshots&order={% if params.sort.as_deref() == Some("snapshots") && params.order.as_deref() != Some("asc") %}asc{% else %}desc{% endif %}" hx-target="#experiments">
+                Snaps {% if params.sort.as_deref() == Some("snapshots") %}{% if params.order.as_deref() == Some("asc") %}↑{% else %}↓{% endif %}{% endif %}
+            </th>
+            <th>Artifacts</th>
+            <th>Hypothesis</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for exp in experiments %}
+        <tr>
+            <td><input type="checkbox" name="ids" value="{{ exp.id }}"></td>
+            <td><a href="/exp/{{ exp.id }}">{{ exp.date }}</a></td>
+            <td><a href="/exp/{{ exp.id }}">{{ exp.name }}</a></td>
+            <td class="status-{{ exp.status }}">{{ exp.status }}</td>
+            <td>
+                {% for tag in exp.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </td>
+            <td>{{ exp.snapshot_count }}</td>
+            <td>{{ exp.artifact_count }}</td>
+            <td>{{ exp.hypothesis }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if experiments.is_empty() %}
+<p>No experiments found.</p>
+{% endif %}

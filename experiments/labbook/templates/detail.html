@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exp.name }} - Lab{% endblock %}
+
+{% block content %}
+<nav>
+    <a href="/">← Back to list</a>
+</nav>
+
+<hgroup>
+    <h1>{{ exp.name }}</h1>
+    <p>{{ exp.id }}</p>
+</hgroup>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+    <span class="status-{{ exp.status }}">{{ exp.status }}</span>
+    {% for tag in exp.tags %}
+    <span class="tag">{{ tag }}</span>
+    {% endfor %}
+</div>
+
+<section>
+    <h2>Notes</h2>
+    <article>
+        {{ notes_html|safe }}
+    </article>
+</section>
+
+<section>
+    <h2>Snapshots ({{ snapshots.len() }})</h2>
+    <div>
+        {% for snapshot in snapshots %}
+        <div class="snapshot-item">
+            <strong>#{{ snapshot.index + 1 }}</strong>
+            <code>{{ snapshot.commit }}</code>
+            ({{ snapshot.branch }})
+            {% if snapshot.dirty %}
+            <mark>dirty</mark>
+            {% endif %}
+
+            {% if let Some(url) = snapshot.github_url %}
+            <a href="{{ url }}" target="_blank">GitHub ↗</a>
+            {% endif %}
+
+            {% if snapshot.has_prev %}
+            <button
+                hx-get="/diff/{{ exp.id }}/{{ snapshot.index - 1 }}..{{ snapshot.index }}"
+                hx-target="#diff-{{ snapshot.index }}"
+                hx-swap="innerHTML"
+            >
+                View diff
+            </button>
+            {% endif %}
+
+            {% if snapshot.dirty && !snapshot.dirty_files.is_empty() %}
+            <div class="dirty-files">
+                Modified: {{ snapshot.dirty_files.join(", ") }}
+            </div>
+            {% endif %}
+
+            <div id="diff-{{ snapshot.index }}"></div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section>
+    <h2>Artifacts ({{ artifacts.len() }})</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+        {% for artifact in artifacts %}
+        <div class="artifact-card">
+            <h4>{{ artifact.name }}</h4>
+            {% match artifact.content %}
+                {% when super::render::ArtifactContent::Image { base64, mime } %}
+                    <img src="data:{{ mime }};base64,{{ base64 }}" alt="{{ artifact.name }}">
+                {% when super::render::ArtifactContent::Code { html, language } %}
+                    <small>{{ language }}</small>
+                    {{ html|safe }}
+                {% when super::render::ArtifactContent::Markdown { html } %}
+                    {{ html|safe }}
+                {% when super::render::ArtifactContent::Text { content } %}
+                    <pre>{{ content }}</pre>
+                {% when super::render::ArtifactContent::Download { size } %}
+                    <p>Binary file ({{ size }} bytes)</p>
+                    <a href="/artifact/{{ exp.id }}/{{ artifact.name }}" download>Download</a>
+            {% endmatch %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

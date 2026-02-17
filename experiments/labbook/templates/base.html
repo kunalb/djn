@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lab{% endblock %}</title>
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        :root {
+            --pico-font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        table {
+            font-size: 0.9rem;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            background: var(--pico-secondary-background);
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 0.25em;
+        }
+        .status-open {
+            color: var(--pico-color-green-500);
+        }
+        .status-closed {
+            color: var(--pico-muted-color);
+        }
+        .artifact-card {
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .artifact-card img {
+            max-width: 100%;
+            height: auto;
+        }
+        .artifact-card pre {
+            max-height: 300px;
+            overflow: auto;
+        }
+        .snapshot-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--pico-muted-border-color);
+        }
+        .snapshot-item:last-child {
+            border-bottom: none;
+        }
+        .dirty-files {
+            font-size: 0.8em;
+            color: var(--pico-muted-color);
+            margin-left: 1rem;
+        }
+        .diff pre {
+            background: #2b303b;
+            color: #c0c5ce;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        .diff .add { color: #a3be8c; }
+        .diff .del { color: #bf616a; }
+        .diff .hunk { color: #8fa1b3; }
+        .diff .meta { color: #65737e; }
+        .compare-table {
+            font-size: 0.85rem;
+        }
+        .compare-table th {
+            min-width: 150px;
+        }
+        .compare-table td img {
+            max-width: 200px;
+            max-height: 150px;
+        }
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .filters > * {
+            margin-bottom: 0;
+        }
+        .filters input[type="search"] {
+            min-width: 200px;
+        }
+        nav {
+            margin-bottom: 1rem;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

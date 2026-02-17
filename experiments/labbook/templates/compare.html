@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Compare - Lab{% endblock %}
+
+{% block content %}
+<nav>
+    <a href="/">← Back to list</a>
+</nav>
+
+<h1>Compare Experiments</h1>
+
+<table class="compare-table">
+    <thead>
+        <tr>
+            <th></th>
+            {% for exp in experiments %}
+            <th>
+                <a href="/exp/{{ exp.id }}">{{ exp.name }}</a>
+                <br>
+                <small>{{ exp.date }}</small>
+            </th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <th>{{ row.label }}</th>
+            {% for value in row.values %}
+            <td>
+                {% if row.is_artifact && !value.is_empty() %}
+                    {% if value.ends_with(".png") || value.ends_with(".jpg") || value.ends_with(".jpeg") || value.ends_with(".gif") || value.ends_with(".svg") %}
+                        <img src="{{ value }}" alt="{{ row.label }}">
+                    {% else %}
+                        <a href="{{ value }}" target="_blank">View</a>
+                    {% endif %}
+                {% else %}
+                    {{ value }}
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
