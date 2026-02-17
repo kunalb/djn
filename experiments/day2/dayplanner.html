@@ -1332,6 +1332,8 @@
       document.removeEventListener('touchcancel', handlePendingTouchEnd);
     }
 
+    const CREATE_TOUCH_THRESHOLD = 20; // Pixels of vertical drag before touch-create activates
+
     function setupCreateDrag(container, type) {
       if (createDragSetup.has(container)) return; // Already setup
       createDragSetup.add(container);
@@ -1345,28 +1347,40 @@
         const rect = container.getBoundingClientRect();
         const relativeY = coords.clientY - rect.top; // rect already accounts for scroll
         const startMins = Math.round(relativeY / PX_PER_MIN / 15) * 15;
+        const isTouch = e.type === 'touchstart';
 
-        // Create preview element
-        const preview = document.createElement('div');
-        preview.className = 'entry-preview';
-        preview.style.top = (startMins * PX_PER_MIN) + 'px';
-        preview.style.height = (15 * PX_PER_MIN) + 'px';
-        container.appendChild(preview);
-
-        createState = {
-          type,
-          container,
-          preview,
-          startMins,
-          scrollTop: container.parentElement.scrollTop,
-          isTouch: e.type === 'touchstart'
-        };
-
-        if (e.type === 'touchstart') {
+        if (isTouch) {
+          // Touch: defer creation until drag threshold exceeded
+          createState = {
+            type,
+            container,
+            preview: null,
+            startMins,
+            scrollTop: container.parentElement.scrollTop,
+            isTouch: true,
+            startY: coords.clientY,
+            activated: false // Not yet committed to creating
+          };
           document.addEventListener('touchmove', doCreateDrag, { passive: false });
           document.addEventListener('touchend', endCreateDrag);
           document.addEventListener('touchcancel', endCreateDrag);
         } else {
+          // Mouse: immediate feedback as before
+          const preview = document.createElement('div');
+          preview.className = 'entry-preview';
+          preview.style.top = (startMins * PX_PER_MIN) + 'px';
+          preview.style.height = (15 * PX_PER_MIN) + 'px';
+          container.appendChild(preview);
+
+          createState = {
+            type,
+            container,
+            preview,
+            startMins,
+            scrollTop: container.parentElement.scrollTop,
+            isTouch: false,
+            activated: true
+          };
           document.addEventListener('mousemove', doCreateDrag);
           document.addEventListener('mouseup', endCreateDrag);
         }
@@ -1378,10 +1392,29 @@
 
     function doCreateDrag(e) {
       if (!createState) return;
-      if (e.cancelable) e.preventDefault(); // Prevent scrolling on touch
 
       const coords = getEventCoords(e);
-      const { container, preview, startMins, scrollTop } = createState;
+      const { container, startMins, scrollTop, isTouch } = createState;
+
+      // Touch: check if drag threshold exceeded before activating
+      if (isTouch && !createState.activated) {
+        const dy = Math.abs(coords.clientY - createState.startY);
+        if (dy < CREATE_TOUCH_THRESHOLD) {
+          // Below threshold - let browser handle scroll
+          return;
+        }
+        // Threshold exceeded - activate create mode
+        createState.activated = true;
+        const preview = document.createElement('div');
+        preview.className = 'entry-preview';
+        preview.style.top = (startMins * PX_PER_MIN) + 'px';
+        preview.style.height = (15 * PX_PER_MIN) + 'px';
+        container.appendChild(preview);
+        createState.preview = preview;
+      }
+
+      if (e.cancelable) e.preventDefault(); // Prevent scrolling once activated
+
       const rect = container.getBoundingClientRect();
       const scrollDelta = container.parentElement.scrollTop - scrollTop;
       const relativeY = coords.clientY - rect.top; // rect already accounts for scroll
@@ -1391,8 +1424,10 @@
       const maxEnd = Math.max(startMins, currentMins);
       const duration = Math.max(15, maxEnd - minStart + 15);
 
-      preview.style.top = (minStart * PX_PER_MIN) + 'px';
-      preview.style.height = (duration * PX_PER_MIN) + 'px';
+      if (createState.preview) {
+        createState.preview.style.top = (minStart * PX_PER_MIN) + 'px';
+        createState.preview.style.height = (duration * PX_PER_MIN) + 'px';
+      }
 
       createState.currentStart = minStart;
       createState.duration = duration;
@@ -1400,15 +1435,18 @@
 
     function endCreateDrag(e) {
       if (createState) {
-        const { type, preview, startMins, currentStart, duration, isTouch } = createState;
-        preview.remove();
+        const { type, preview, startMins, currentStart, duration, isTouch, activated } = createState;
+        if (preview) preview.remove();
 
-        const finalStart = currentStart !== undefined ? currentStart : startMins;
-        const finalDuration = duration || 30;
-        const hour = Math.floor(finalStart / 60);
-        const minutes = finalStart % 60;
+        // Only create entry if the drag was activated (mouse always, touch only after threshold)
+        if (activated) {
+          const finalStart = currentStart !== undefined ? currentStart : startMins;
+          const finalDuration = duration || 30;
+          const hour = Math.floor(finalStart / 60);
+          const minutes = finalStart % 60;
 
-        addEntry(type, hour, minutes, finalDuration);
+          addEntry(type, hour, minutes, finalDuration);
+        }
 
         // Clean up listeners
         if (isTouch) {
@@ -2194,8 +2232,8 @@
     }
 
     // ============ VERSION INFO ============
-    const APP_VERSION = '1.7.1';
-    const APP_UPDATED = '2026-01-29';
+    const APP_VERSION = '1.8.0';
+    const APP_UPDATED = '2026-02-16';
 
     function showVersionInfo() {
       document.getElementById('versionNumber').textContent = APP_VERSION;
@@ -2748,6 +2786,9 @@
         }
         return;
       }
+
+      // Don't intercept other Ctrl/Cmd shortcuts (Ctrl+L, Ctrl+A, etc.)
+      if (ctrl) return;
 
       // Don't process other shortcuts if modal is open or input focused
       if (isModalOpen()) return;

@@ -117,6 +117,22 @@ pub fn commit_in_dir(dir: &Path, message: &str) -> Result<()> {
     Ok(())
 }
 
+/// Get diff between two commits
+#[allow(dead_code)] // Used by lab-view binary
+pub fn get_diff(repo_path: &Path, from: &str, to: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(["diff", &format!("{from}..{to}")])
+        .current_dir(repo_path)
+        .output()
+        .context("failed to run git diff")?;
+
+    if !output.status.success() {
+        anyhow::bail!("git diff failed: {}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
 /// Initialize a new git repository
 pub fn init_repo(dir: &Path) -> Result<()> {
     let output = Command::new("git")
