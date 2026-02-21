@@ -1,0 +1,49 @@
+#!/usr/bin/env -S uv run --script
+# -*- mode: python -*-
+#
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+# ]
+# ///
+
+import code
+import readline
+import sys
+
+from types import SimpleNamespace
+
+
+class __ego__:
+
+    @staticmethod
+    def hookable(fn):
+        ...
+
+    @staticmethod
+    def prompt(q):
+        result = f"response to {len(q)}"
+        print(result)
+
+
+    class EgoRepl(code.InteractiveConsole):
+
+        def runsource(self, source, filename="<input>", symbol="single"):
+            if source.startswith(";"):
+                return __ego__.prompt(source[1:])
+
+            return super().runsource(source, filename, symbol)
+
+        def interact(self, banner="", exitmsg=""):
+            print("ego: Extensible aGent Orchestrator")
+            return super().interact(banner, exitmsg)
+
+
+def main():
+    sys.ps1 = "> "
+    sys.ps2 = " "
+    __ego__.EgoRepl(globals()).interact()
+
+
+if __name__ == "__main__":
+    main()
