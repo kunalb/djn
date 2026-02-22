@@ -1,11 +1,24 @@
 import code
 import readline
 import sys
+import os
 
+from functools import cache
 from types import SimpleNamespace
 
 
+from openai import OpenAI
+
+
+
+
 class __ego__:
+
+    @staticmethod
+    @cache
+    def client() -> OpenAI:
+        return OpenAI(api_key=os.environ.get("PROXY_API_KEY"),
+                      base_url="http://localhost:8317/v1/")
 
     @staticmethod
     def hookable(fn):
@@ -13,9 +26,12 @@ class __ego__:
 
     @staticmethod
     def prompt(q):
-        result = f"response to {len(q)}"
-        print(result)
-
+        result = __ego__.client().responses.create(
+            model="claude-opus-4-6",
+            instructions="You are a coding agent running in a Python REPL",
+            input=q,
+        )
+        print(result.output_text)
 
     class EgoRepl(code.InteractiveConsole):
 
