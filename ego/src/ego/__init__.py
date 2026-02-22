@@ -1,12 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# -*- mode: python -*-
-#
-# /// script
-# requires-python = ">=3.14"
-# dependencies = [
-# ]
-# ///
-
 import code
 import readline
 import sys

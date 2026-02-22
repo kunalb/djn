@@ -1,13 +1,12 @@
-# Extensible aGent Orchestration
+# Extensible aGent Orchestrator
 
 Ego is an attempt to make an extremely programmable and introspectible agentic orchestration framework. Everything runs off a central Python process, including actions taken by the agent.
 
 Inspired by my favorite editor.
 
-
 - Shoutout to https://bernsteinbear.com/blog/simple-python-repl/ for a really good tutorial on building repls
 - Actual source code: https://github.com/python/cpython/blob/main/Lib/code.py
-
+- (via claude) https://rogs.me/2026/02/use-your-claude-max-subscription-as-an-api-with-cliproxyapi/
 
 General idea
 - make the repl allow text code generation that can then be implemented by the agent

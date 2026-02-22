@@ -1,0 +1,19 @@
+[project]
+name = "ego"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Kunal Bhalla", email = "bhalla.kunal@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "openai>=2.21.0",
+]
+
+[project.scripts]
+ego = "ego:main"
+
+[build-system]
+requires = ["uv_build>=0.9.15,<0.10.0"]
+build-backend = "uv_build"
