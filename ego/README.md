@@ -25,3 +25,11 @@ options
 
 
 - first, try proving out the idea of recursive llms / just giving the agent access to python, history, context etc. easily
+
+
+- thinking through this:
+  - there's an interaction window for me
+  - there's outputs for all users & agents interacting with the same memory
+  - can have multiple frontends, the same way emacs does it
+  - need to understand what I can pull off with models
+  - AI can work on any layer, which is what makes this so much fun
