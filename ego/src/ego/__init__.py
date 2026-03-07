@@ -1,54 +1,30 @@
 import code
 import readline
 import sys
-import os
-
-from functools import cache
-from types import SimpleNamespace
 
 
-from openai import OpenAI
+import ego.__ego__ as __ego__
 
 
+class Context:
+
+    def __init__(self):
+        self._instructions = []
+
+    def len(self):
+        return sum(len(x) for x in self._instructions)
+
+    def instruct(self, val):
+        self._instructions.append(val)
+
+    def get(self) -> str:
+        return "\n\n".join(self._instructions)
 
 
-class __ego__:
-
-    @staticmethod
-    @cache
-    def client() -> OpenAI:
-        return OpenAI(api_key=os.environ.get("PROXY_API_KEY"),
-                      base_url="http://localhost:8317/v1/")
-
-    @staticmethod
-    def hookable(fn):
-        ...
-
-    @staticmethod
-    def prompt(q):
-        result = __ego__.client().responses.create(
-            model="claude-opus-4-6",
-            instructions="You are a coding agent running in a Python REPL",
-            input=q,
-        )
-        print(result.output_text)
-
-    class EgoRepl(code.InteractiveConsole):
-
-        def runsource(self, source, filename="<input>", symbol="single"):
-            if source.startswith(";"):
-                return __ego__.prompt(source[1:])
-
-            return super().runsource(source, filename, symbol)
-
-        def interact(self, banner="", exitmsg=""):
-            print("ego: Extensible aGent Orchestrator")
-            return super().interact(banner, exitmsg)
+context = Context()
 
 
 def main():
-    sys.ps1 = "> "
-    sys.ps2 = " "
     __ego__.EgoRepl(globals()).interact()
 
 
