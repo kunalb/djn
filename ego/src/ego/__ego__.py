@@ -17,16 +17,11 @@ def hookable(fn):
 
 def prompt(q):
     result = client().responses.create(
-        model="claude-opus-4-6",
-        tools=tools,
+        model="qwen/qwen3-coder:free",
+        tools=[],
         instructions=f"""You are a coding agent running in a Python REPL.
 
-can execute code to interact with the repl and get output results. The tools
-ed in are simply python functions you can execute in the repl and maintain
-e on your behalf.
-
-actual user request is available through the global variable context, which
-n object of type Context. Use `context.get()` in the repl to access context.
+You can execute code to interact with the repl and get output results.
         """,
         input=[],
     )
@@ -76,8 +71,8 @@ class EgoRepl(code.InteractiveConsole):
     @cache
     def _client(self) -> OpenAI:
         return OpenAI(
-            api_key=os.environ.get("PROXY_API_KEY"),
-            base_url="http://localhost:8317/v1/",
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+            base_url="http://openrouter.ai/api/v1/",
         )
 
     def _set_prompt(self):
