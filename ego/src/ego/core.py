@@ -19,7 +19,13 @@ def openrouter_client() -> AsyncOpenAI:
 
 
 async def make_ego() -> Ego:
-    return Ego()
+    ego = Ego()
+    await ego.add_agent(
+        "nemotron",
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        openrouter_client(),
+    )
+    return ego
 
 
 class Context:
@@ -46,6 +52,7 @@ class Ego:
         await self._agents[name].asend(None)
 
     async def msg(self, name: str, msg: str):
+        # Update this to actually handle a full loop of interactions
         self._context.record_msg(name, msg)
         response = await self._agents[name].asend(msg)
         self._context.record_response(name, response)
@@ -108,21 +115,3 @@ You can execute code to interact with the repl and get results.""",
             tools=await ego.list_tools(),
         )
         previous_response_id = response.id
-
-
-async def async_main():
-    ego = await make_ego()
-    await ego.add_agent(
-        "nemotron",
-        "nvidia/nemotron-3-super-120b-a12b:free",
-        openrouter_client(),
-    )
-    await ego.msg("nemotron", "What time is it?")
-
-
-def main():
-    asyncio.run(async_main())
-
-
-if __name__ == "__main__":
-    main()

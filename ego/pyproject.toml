@@ -1,7 +1,7 @@
 [project]
 name = "ego"
 version = "0.1.0"
-description = "Add your description here"
+description = "An Extensible aGent Orchestrator"
 readme = "README.md"
 authors = [
     { name = "Kunal Bhalla", email = "bhalla.kunal@gmail.com" }
@@ -13,7 +13,6 @@ dependencies = [
 
 [project.scripts]
 ego = "ego:main"
-scratch = "ego.scratch:main"
 
 [build-system]
 requires = ["uv_build>=0.9.15,<0.10.0"]
